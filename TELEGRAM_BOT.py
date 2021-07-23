@@ -75,10 +75,13 @@ def text_message(message):
 			mc_list = []
 			mc_list.append(message.text)
 			data_for_user = check_mc(mc_list)
-			message_result = ''
-			for x in data_for_user.get(message.text):
-				message_result = message_result + str(x) + ':  ' + str(data_for_user.get(message.text).get(x)) + '\n'
-			bot.send_message(message.from_user.id, message_result)
+			if data_for_user == {}:
+				bot.send_message(message.from_user.id, 'Такого кода маркировки не существует в ГИСМТ')
+			else:
+				message_result = ''
+				for x in data_for_user.get(message.text):
+					message_result = message_result + str(x) + ':  ' + str(data_for_user.get(message.text).get(x)) + '\n'
+				bot.send_message(message.from_user.id, message_result)
 		else:
 			bot.send_message(message.from_user.id, 'Что-то я вас не понимаю, перепроверьте данные, которые вводите, пожалуйста. Для более детальной информации ты всегда можешь использовать команду /help')
 
