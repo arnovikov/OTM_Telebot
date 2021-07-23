@@ -1,8 +1,9 @@
+from GLOBAL_VAR import global_var
 def create_excel (mc_list,mc_data,file_name):
     import openpyxl
     import configparser
     config = configparser.ConfigParser()  # создаём объекта парсера
-    config.read("C:/Users/arnovikov/OneDrive - Nokian Tyres/Documents/_Работа/OTM Project/MC_Check/settings.ini")
+    config.read(global_var())
     file_path = str(config["CREATE_EXCEL"]["file_path"])+file_name
     wb = openpyxl.Workbook()
     ws = wb.active

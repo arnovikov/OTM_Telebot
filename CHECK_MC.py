@@ -1,3 +1,4 @@
+from GLOBAL_VAR import global_var
 def check_mc (mc_list):
     import requests
     import json
@@ -6,7 +7,7 @@ def check_mc (mc_list):
     import datetime
     import os
     config = configparser.ConfigParser()  # создаём объекта парсера
-    config.read("C:/Users/arnovikov/OneDrive - Nokian Tyres/Documents/_Работа/OTM Project/MC_Check/settings.ini")
+    config.read(global_var())
     url = config["CHECK_MC"]["url"]
     token_path = config["CHECK_MC"]["token_path"]
     script_path = config["CHECK_MC"]["script_path"]

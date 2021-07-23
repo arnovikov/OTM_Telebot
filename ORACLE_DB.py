@@ -1,8 +1,9 @@
+from GLOBAL_VAR import global_var
 def select_MC_by_UPD(UPD_number):
     import cx_Oracle
     import configparser
     config = configparser.ConfigParser()  # создаём объекта парсера
-    config.read("C:/Users/arnovikov/OneDrive - Nokian Tyres/Documents/_Работа/OTM Project/MC_Check/settings.ini")
+    config.read(global_var())
     conn_str = config["ORACLE_DB"]["conn_str"]
     conn = cx_Oracle.connect(conn_str)
     mc_list = []
@@ -16,26 +17,52 @@ def select_MC_by_UPD(UPD_number):
     conn.close()
     return mc_list
 
+
 def UPD_data(UPD_number):
     import cx_Oracle
     import configparser
     config = configparser.ConfigParser()  # создаём объекта парсера
-    config.read("C:/Users/arnovikov/OneDrive - Nokian Tyres/Documents/_Работа/OTM Project/MC_Check/settings.ini")
+    config.read(global_var())
     conn_str = config["ORACLE_DB"]["conn_str"]
     conn = cx_Oracle.connect(conn_str)
     str1 = """
-            select t.trx_number, t.trx_date, p.party_name, sum(tl.quantity_invoiced) as TYRES_QTY
+            select t.trx_number as UPD_NUMBER, trunc(t.trx_date) as UPD_DATE, p.party_name as CUSTOMER_NAME, sum(tl.quantity_invoiced) as TYRES_QTY
             from ra_customer_trx_all t , ra_customer_trx_lines_all tl, hz_cust_accounts ca, hz_parties p
             where 1=1 
             and t.org_id = 82
             and t.CUSTOMER_TRX_ID = tl.CUSTOMER_TRX_ID
             and t.SOLD_TO_CUSTOMER_ID = ca.CUST_ACCOUNT_ID
             and ca.PARTY_ID = p.PARTY_ID
-            and t.TRX_NUMBER = '
-            """
+            and t.TRX_NUMBER = '"""
     str2 = """' group by t.trx_number, t.trx_date, p.party_name"""
     c = conn.cursor()
     c.execute(str1 + UPD_number + str2)
+    columns = [col[0] for col in c.description]
+    c.rowfactory = lambda *args: dict(zip(columns, args))
+    data = c.fetchall()
+    conn.close()
+    return data
+
+def UIT_data (uit):
+    import cx_Oracle
+    import configparser
+    config = configparser.ConfigParser()  # создаём объекта парсера
+    config.read(global_var())
+    conn_str = config["ORACLE_DB"]["conn_str"]
+    conn = cx_Oracle.connect(conn_str)
+    str1 = """
+            select t.trx_number as UPD_Number, trunc(t.trx_date) as UPD_DATE, p.party_name as CUSTOMER_NAME, i.segment1 as ITEM_CODE, mc.SOURCE_REFERENCE, mc.SOURCE_TYPE 
+            from xxnt.xxinv060_customer_trx_mc mc, ra_customer_trx_all t , hz_cust_accounts ca, hz_parties p, mtl_system_items i
+            where mc.customer_trx_id = t.customer_trx_id and mc.org_id = t.org_id 
+            and mc.org_id in (82)
+            and i.ORGANIZATION_ID = 110
+            and mc.INVENTORY_ITEM_ID = i.INVENTORY_ITEM_ID
+            and t.SOLD_TO_CUSTOMER_ID = ca.CUST_ACCOUNT_ID
+            and ca.PARTY_ID = p.PARTY_ID
+            and mc.MC = q'{"""
+    str2 = """}' order by mc.MC, mc.creation_date asc"""
+    c = conn.cursor()
+    c.execute(str1 + uit + str2)
     columns = [col[0] for col in c.description]
     c.rowfactory = lambda *args: dict(zip(columns, args))
     data = c.fetchall()

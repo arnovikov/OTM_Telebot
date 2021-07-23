@@ -1,16 +1,16 @@
 import telebot
-from telebot import types
 import cx_Oracle
 import re
 import os
 import configparser
-from ORACLE_DB import select_MC_by_UPD
+from ORACLE_DB import select_MC_by_UPD, UPD_data, UIT_data
 from CHECK_MC import check_mc
 from CREATE_EXCEL import create_excel
 from TXT_FILE_PROCESSING import find_good_mc, find_bad_mc
+from GLOBAL_VAR import global_var
 
 config = configparser.ConfigParser()  # создаём объекта парсера
-config.read("C:/Users/arnovikov/OneDrive - Nokian Tyres/Documents/_Работа/OTM Project/MC_Check/settings.ini")
+config.read(global_var())
 lib_dir = config["ORACLE_DB"]["lib_dir"]
 telebot_token = config["TELEGRAM_BOT"]["telebot_token"]
 
@@ -19,16 +19,10 @@ bot = telebot.TeleBot(telebot_token)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-	bot.send_message(message.from_user.id, 'Привет, ' + message.from_user.first_name + '!\n\nВы попали в гости к боту по проверке кодов маркировки.\n\nДля того, чтобы узнать на что способен этот бот, используйте команду /help\n\nК сожалению, данный сервис доступен не для всех.\nДля получения доступа к сервису сообщите, пожалуйста, в Service Desk\nсвой user ID в Telegram = ' + str(message.from_user.id))
-	# markup = types.ReplyKeyboardMarkup(row_width=2)
-	# itembtn1 = types.KeyboardButton('/UPD_Number')
-	# itembtn2 = types.KeyboardButton('/TXT_file')
-	# markup.add(itembtn1, itembtn2)
-	# bot.send_message(message.from_user.id, "Choose one letter:", reply_markup=markup)
+	bot.send_message(message.from_user.id, 'Привет, ' + message.from_user.first_name + '!\n\nВы попали в гости к боту по проверке кодов маркировки.\n\nДля того, чтобы узнать на что способен этот бот, используйте команду /help \n\nК сожалению, данный сервис доступен не для всех.\n\nДля получения доступа к сервису сообщите, пожалуйста, в Service Desk\nсвой user ID в Telegram = ' + str(message.from_user.id))
 
 @bot.message_handler(commands=['help'])
 def send_help(message):
-	#markup = types.ReplyKeyboardRemove()
 	bot.send_message(message.from_user.id, 'Вот что я умею:\n\n1.Проверять один КМ. Для этого просто введите код маркировки.\n\n2.Проверять список КМ по номеру УПД. Для этого необходимо указать номер УПД.\n\n3.Проверять КМ по списку из текстового файла. Для этого отправьте мне txt файл (каждый КМ должен быть в новой строке)')
 
 
@@ -36,12 +30,20 @@ def send_help(message):
 def text_message(message):
 	import configparser
 	config = configparser.ConfigParser()  # создаём объекта парсера
-	config.read("C:/Users/arnovikov/OneDrive - Nokian Tyres/Documents/_Работа/OTM Project/MC_Check/settings.ini")
+	config.read(global_var())
 	users = config["TELEGRAM_BOT"]["users"].split(';')
 	if str(message.from_user.id) not in users:
 		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /start')
 	else:
 		if len(re.sub("^\s+|\n|\r|\s+$", '', message.text)) == 11 and message.text[:2]=='20':
+			upd_data = UPD_data(message.text)
+			bot.send_message(message.from_user.id, 'UPD additional data:')
+			message_result = '################' + '\n'
+			for dict in upd_data:
+				for x in dict:
+					message_result = message_result + str(x) + ':  ' + str(dict.get(x)) + '\n'
+				message_result = message_result + '################' + '\n'
+			bot.send_message(message.from_user.id, message_result)
 			bot.send_message(message.from_user.id, 'Ожидайте ответа...')
 			try:
 				mc_list = select_MC_by_UPD(message.text)
@@ -62,6 +64,14 @@ def text_message(message):
 				except Exception:
 					bot.send_message(message.from_user.id, 'Не удалось сформирвоать Excel файл, обратитесь в поддержку')
 		elif len(re.sub("^\s+|\n|\r|\s+$", '', message.text)) == 31 and message.text[:2]=='01' and message.text[16:18]=='21':
+			bot.send_message(message.from_user.id, 'Additional UIT data:')
+			uit_data = UIT_data(message.text)
+			message_result = '################' + '\n'
+			for dict in uit_data:
+				for x in dict:
+					message_result = message_result + str(x) + ':  ' + str(dict.get(x)) + '\n'
+				message_result = message_result + '################' + '\n'
+			bot.send_message(message.from_user.id, message_result)
 			mc_list = []
 			mc_list.append(message.text)
 			data_for_user = check_mc(mc_list)
@@ -77,14 +87,14 @@ def text_message(message):
 def handle_docs(message):
 	import configparser
 	config = configparser.ConfigParser()  # создаём объекта парсера
-	config.read("C:/Users/arnovikov/OneDrive - Nokian Tyres/Documents/_Работа/OTM Project/MC_Check/settings.ini")
+	config.read(global_var())
 	users = config["TELEGRAM_BOT"]["users"].split(';')
 	if str(message.from_user.id) not in users:
 		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /start')
 	else:
 		import configparser
 		config = configparser.ConfigParser()  # создаём объекта парсера
-		config.read("C:/Users/arnovikov/OneDrive - Nokian Tyres/Documents/_Работа/OTM Project/MC_Check/settings.ini")
+		config.read(global_var())
 		document_id = message.document.file_id
 		file_info = bot.get_file(document_id)
 		downloaded_file = bot.download_file(file_info.file_path)
