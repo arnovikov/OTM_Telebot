@@ -2,7 +2,7 @@ from GLOBAL_VAR import global_var
 def select_MC_by_UPD(UPD_number):
     import cx_Oracle
     import configparser
-    config = configparser.ConfigParser()  # создаём объекта парсера
+    config = configparser.ConfigParser()
     config.read(global_var())
     conn_str = config["ORACLE_DB"]["conn_str"]
     conn = cx_Oracle.connect(conn_str)
@@ -21,7 +21,7 @@ def select_MC_by_UPD(UPD_number):
 def UPD_data(UPD_number):
     import cx_Oracle
     import configparser
-    config = configparser.ConfigParser()  # создаём объекта парсера
+    config = configparser.ConfigParser()
     config.read(global_var())
     conn_str = config["ORACLE_DB"]["conn_str"]
     conn = cx_Oracle.connect(conn_str)
@@ -46,7 +46,7 @@ def UPD_data(UPD_number):
 def UIT_data (uit):
     import cx_Oracle
     import configparser
-    config = configparser.ConfigParser()  # создаём объекта парсера
+    config = configparser.ConfigParser()
     config.read(global_var())
     conn_str = config["ORACLE_DB"]["conn_str"]
     conn = cx_Oracle.connect(conn_str)

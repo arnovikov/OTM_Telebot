@@ -6,7 +6,7 @@ def check_mc (mc_list):
     import subprocess
     import datetime
     import os
-    config = configparser.ConfigParser()  # создаём объекта парсера
+    config = configparser.ConfigParser()
     config.read(global_var())
     url = config["CHECK_MC"]["url"]
     token_path = config["CHECK_MC"]["token_path"]

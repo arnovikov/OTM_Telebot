@@ -2,7 +2,7 @@ from GLOBAL_VAR import global_var
 def create_excel (mc_list,mc_data,file_name):
     import openpyxl
     import configparser
-    config = configparser.ConfigParser()  # создаём объекта парсера
+    config = configparser.ConfigParser()
     config.read(global_var())
     file_path = str(config["CREATE_EXCEL"]["file_path"])+file_name
     wb = openpyxl.Workbook()
