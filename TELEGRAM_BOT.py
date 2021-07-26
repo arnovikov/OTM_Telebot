@@ -36,7 +36,7 @@ def text_message(message):
 	if str(message.from_user.id) not in users:   #check if user can use telebot or not
 		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /start')
 	else:
-		if len(re.sub("^\s+|\n|\r|\s+$", '', message.text)) == 11 and message.text[:2]=='20':  #check for UPD number format
+		if len(re.sub("^\s+|\n|\r|\s+$", '', message.text)) == 11 and message.text[:2]=='20' and message.text.isnumeric():  #check for UPD number format
 			try:
 				upd_data = UPD_data(message.text)  #run procedure to get additional data from Oracle DB
 				bot.send_message(message.from_user.id, 'UPD additional data:')
@@ -95,6 +95,13 @@ def text_message(message):
 				for x in data_for_user.get(message.text):  #creating a message for user with data from GISMT
 					message_result = message_result + '*'+str(x) + ':* [' + str(data_for_user.get(message.text).get(x)) + ']\n'
 				bot.send_message(message.from_user.id, message_result, parse_mode= "Markdown")
+		elif message.text.lower().find("привет") != -1:  #check for 'hello'
+			bot.send_sticker(message.from_user.id, 'CAACAgIAAxkBAAECo0lg_n6BDazemB16T4YlCDcrjCMeIwACUw0AAk8zeUlbToMKNIIVcCAE')
+			bot.send_message(message.from_user.id, 'Вот что я умею:\n\n1.Проверять один КМ. Для этого просто введите код маркировки.\n\n2.Проверять список КМ по номеру УПД. Для этого необходимо указать номер УПД.\n\n3.Проверять КМ по списку из текстового файла. Для этого отправьте мне txt файл (каждый КМ должен быть в новой строке)')
+		elif message.text.lower().find("дурак") != -1 or message.text.lower().find("тупой") != -1 or message.text.lower().find("тупица") != -1:  #check for rude
+			bot.send_sticker(message.from_user.id, 'CAACAgIAAxkBAAECoyxg_nynhc34Q3XdDGp0BpKLZdoV-wAClQUAAiMFDQABt0k_ZMWu768gBA')
+		elif message.text.lower().find("класс") != -1 or message.text.lower().find("супер") != -1 or message.text.lower().find("спасибо") != -1:  #check for thanks
+			bot.send_sticker(message.from_user.id, 'CAACAgIAAxkBAAECozdg_n1XvL7Pbcr--_5iIfg72IeoVwACAwADkp8eEXErN798EUMfIAQ')
 		else:
 			bot.send_message(message.from_user.id, 'Что-то я вас не понимаю, перепроверьте данные, которые вводите, пожалуйста. Для более детальной информации ты всегда можешь использовать команду /help')
 
