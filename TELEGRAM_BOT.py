@@ -105,6 +105,7 @@ def text_message(message):
 		elif message.text.lower().find("класс") != -1 or message.text.lower().find("супер") != -1 or message.text.lower().find("спасибо") != -1:  #check for thanks
 			bot.send_sticker(message.from_user.id, 'CAACAgIAAxkBAAECozdg_n1XvL7Pbcr--_5iIfg72IeoVwACAwADkp8eEXErN798EUMfIAQ')
 		else:
+			bot.send_sticker(message.from_user.id,'CAACAgIAAxkBAAECoyhg_nxSIPUY753MX_LTa21rfeTbJwAChwUAAiMFDQABE-Nhq6tbXOMgBA')
 			bot.send_message(message.from_user.id, 'Что-то я вас не понимаю, перепроверьте данные, которые вводите, пожалуйста. Для более детальной информации ты всегда можешь использовать команду /help')
 
 
