@@ -59,6 +59,8 @@ def text_message(message):
 					bot.send_message(message.from_user.id, 'Не удалось подключиться к ГИСМТ, обратитесь в поддержку')
 					bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
 					bot.send_message(support_chat_id, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
+			else:
+				bot.send_message(message.from_user.id, 'Указанный УПД не содержит ни одного кода маркировки')
 			if data_for_user != {}:
 				result_file = create_excel(mc_list,data_for_user,message.text+'_result.xlsx')  #create Excel report with marking codes list
 				tmp_file = open(result_file, 'rb')
