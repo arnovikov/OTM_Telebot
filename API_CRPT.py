@@ -11,7 +11,7 @@ def check_mc (mc_list):
     url = config["API_CRPT"]["url_check_mc"]
     token_path = config["API_CRPT"]["token_path"]
     script_path = config["API_CRPT"]["script_path"]
-    mc_maxamount_to_check = int(config["CHECK_MC"]["mc_maxamount_to_check"])
+    mc_maxamount_to_check = int(config["API_CRPT"]["mc_maxamount_to_check"])
     file_time = datetime.datetime.fromtimestamp(os.stat(token_path).st_mtime)
     delta_time = datetime.timedelta(hours=10)
     if file_time+delta_time <= datetime.datetime.now():
