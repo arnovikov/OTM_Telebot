@@ -3,8 +3,8 @@ import cx_Oracle
 import re
 import os
 import configparser
-from ORACLE_DB import select_MC_by_UPD, UPD_data, UIT_data
-from CHECK_MC import check_mc
+from ORACLE_DB import select_MC_by_UPD, UPD_data, UIT_data, EDO_file_name
+from API_CRPT import check_mc, check_doc_status
 from CREATE_EXCEL import create_excel
 from TXT_FILE_PROCESSING import find_good_mc, find_bad_mc
 from GLOBAL_VAR import global_var
@@ -47,11 +47,20 @@ def text_message(message):
 					message_result = message_result + '################' + '\n'
 				bot.send_message(message.from_user.id, message_result,parse_mode= "Markdown")
 				bot.send_message(message.from_user.id, 'Ожидайте ответа...')
+				edo_file_name = EDO_file_name(message.text)
 				mc_list = select_MC_by_UPD(message.text)  #get marking codes list from Oracle DB
 			except Exception as err:
 				bot.send_message(message.from_user.id, 'Не удалось подключиться к БД Oracle, обратитесь в поддержку')
 				bot.send_message(message.from_user.id, 'Ошибка: '+str(err))
 				bot.send_message(support_chat_id,'Кое-кто попытался сломать бота!\n Вот это пользователь: '+str(message.from_user.id)+'\n'+str(message.from_user.first_name)+str(message.from_user.last_name)+'\n'+'Ошибка: '+str(err))
+			if edo_file_name !=None:
+				try:
+					doc_status = check_doc_status(edo_file_name)
+					bot.send_message(message.from_user.id, 'Статус ЭДО документа в ГИСМТ: '+doc_status)
+				except Exception:
+					bot.send_message(message.from_user.id, 'Такого документа нет в ГИСМТ, скорее всего его ещё не подписали с двух сторон')
+			else:
+				bot.send_message(message.from_user.id, 'Статус ЭДО документа в ГИСМТ: это бумажный документ, в ГИСМТ такого нет')
 			if mc_list !=[]:
 				try:
 					data_for_user = check_mc(mc_list)  #send marking codes list to GISMT in order to get the data

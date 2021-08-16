@@ -68,3 +68,21 @@ def UIT_data (uit):
     data = c.fetchall()
     conn.close()
     return data
+
+def EDO_file_name(doc_num):
+    import cx_Oracle
+    import configparser
+    config = configparser.ConfigParser()
+    config.read(global_var())
+    conn_str = config["ORACLE_DB"]["conn_str"]
+    conn = cx_Oracle.connect(conn_str)
+    str1 = """
+                SELECT max(file_name) keep (dense_rank last order by creation_date)
+                FROM XXFIN230_EDOC_OUTBOUND_INT1  
+                WHERE DOCUMENT_NUMBER in  ('"""
+    str2 = """') and DOC_TYPE  in ('УПД','УКД')"""
+    c = conn.cursor()
+    c.execute(str1 + doc_num + str2)
+    file_name = c.fetchone()
+    conn.close()
+    return file_name[0]
