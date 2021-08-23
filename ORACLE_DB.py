@@ -26,15 +26,17 @@ def UPD_data(UPD_number):
     conn_str = config["ORACLE_DB"]["conn_str"]
     conn = cx_Oracle.connect(conn_str)
     str1 = """
-            select t.trx_number as TRX_Number, decode(t.attribute4,'C','УКД','A','УПДи','УПД') as TRX_Type, trunc(t.trx_date) as UPD_DATE, p.party_name as CUSTOMER_NAME, sum(tl.quantity_invoiced) as TYRES_QTY
-            from ra_customer_trx_all t , ra_customer_trx_lines_all tl, hz_cust_accounts ca, hz_parties p
+            select t.trx_number as TRX_NUMBER, decode(t.attribute4,'C','УКД','A','УПДи','УПД') as TRX_Type, trunc(t.trx_date) as TRX_DATE, par.ORGANIZATION_CODE as WAREHOUSE_CODE, tl.attribute15 as TRIP, p.party_name as CUSTOMER_NAME, sum(tl.quantity_invoiced) as TYRES_QTY
+            from ra_customer_trx_all t , ra_customer_trx_lines_all tl, hz_cust_accounts ca, hz_parties p, mtl_parameters par
             where 1=1 
             and t.org_id = 82
+            and tl.LINE_TYPE = 'LINE'
+            and tl.WAREHOUSE_ID = par.organization_id
             and t.CUSTOMER_TRX_ID = tl.CUSTOMER_TRX_ID
             and t.SOLD_TO_CUSTOMER_ID = ca.CUST_ACCOUNT_ID
             and ca.PARTY_ID = p.PARTY_ID
             and t.TRX_NUMBER = '"""
-    str2 = """' group by t.trx_number, t.trx_date, p.party_name"""
+    str2 = """' group by t.trx_number, t.attribute4, t.trx_date,par.ORGANIZATION_CODE, tl.attribute15, p.party_name"""
     c = conn.cursor()
     c.execute(str1 + UPD_number + str2)
     columns = [col[0] for col in c.description]
@@ -51,7 +53,7 @@ def UIT_data (uit):
     conn_str = config["ORACLE_DB"]["conn_str"]
     conn = cx_Oracle.connect(conn_str)
     str1 = """
-            select t.trx_number as UPD_Number, trunc(t.trx_date) as UPD_DATE, p.party_name as CUSTOMER_NAME, i.segment1 as ITEM_CODE, mc.SOURCE_REFERENCE, mc.SOURCE_TYPE 
+            t.trx_number as TRX_Number, decode(t.attribute4,'C','УКД','A','УПДи','УПД') as TRX_Type, trunc(t.trx_date) as TRX_DATE, p.party_name as CUSTOMER_NAME, i.segment1 as ITEM_CODE, mc.SOURCE_REFERENCE, mc.SOURCE_TYPE 
             from xxnt.xxinv060_customer_trx_mc mc, ra_customer_trx_all t , hz_cust_accounts ca, hz_parties p, mtl_system_items i
             where mc.customer_trx_id = t.customer_trx_id and mc.org_id = t.org_id 
             and mc.org_id in (82)
