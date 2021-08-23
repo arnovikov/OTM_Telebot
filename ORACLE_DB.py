@@ -26,7 +26,7 @@ def UPD_data(UPD_number):
     conn_str = config["ORACLE_DB"]["conn_str"]
     conn = cx_Oracle.connect(conn_str)
     str1 = """
-            select t.trx_number as UPD_NUMBER, trunc(t.trx_date) as UPD_DATE, p.party_name as CUSTOMER_NAME, sum(tl.quantity_invoiced) as TYRES_QTY
+            select t.trx_number as TRX_Number, decode(t.attribute4,'C','УКД','A','УПДи','УПД') as TRX_Type, trunc(t.trx_date) as UPD_DATE, p.party_name as CUSTOMER_NAME, sum(tl.quantity_invoiced) as TYRES_QTY
             from ra_customer_trx_all t , ra_customer_trx_lines_all tl, hz_cust_accounts ca, hz_parties p
             where 1=1 
             and t.org_id = 82
@@ -79,7 +79,7 @@ def EDO_file_name(doc_num):
     str1 = """
                 SELECT max(file_name) keep (dense_rank last order by creation_date)
                 FROM XXFIN230_EDOC_OUTBOUND_INT1  
-                WHERE DOCUMENT_NUMBER in  ('"""
+                WHERE substr(ext_doc_group_id,3,11) in  ('"""
     str2 = """') and DOC_TYPE  in ('УПД','УКД')"""
     c = conn.cursor()
     c.execute(str1 + doc_num + str2)
