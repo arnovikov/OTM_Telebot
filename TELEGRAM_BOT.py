@@ -23,11 +23,11 @@ bot = telebot.TeleBot(telebot_token) #connect to telebot
 
 @bot.message_handler(commands=['start'])  #handle of /start command
 def send_welcome(message):
-	bot.send_message(message.from_user.id, 'Привет, ' + message.from_user.first_name + '!\n\nВы попали в гости к боту по проверке кодов маркировки.\n\nДля того, чтобы узнать на что способен этот бот, используйте команду /help \n\nК сожалению, данный сервис доступен не для всех.\n\nДля получения доступа к сервису сообщите, пожалуйста, в Service Desk\nсвой user ID в Telegram = ' + str(message.from_user.id))
+	bot.send_message(message.from_user.id, 'Привет, ' + message.from_user.first_name + '!\n\nВы попали в гости к боту по проверке кодов маркировки.\n\nДля того, чтобы узнать на что способен этот бот, используйте команду /help \n\nК сожалению, данный сервис доступен не для всех. \n\nДля получения доступа к сервису необходимо пройти регистрацию по команде /registration ' )
 
 @bot.message_handler(commands=['help']) #handle of /help command
 def send_help(message):
-	bot.send_message(message.from_user.id, 'Вот что я умею:\n\n1.Проверять один КМ. Для этого просто введите код маркировки.\n\n2.Проверять список КМ по номеру УПД. Для этого необходимо указать номер УПД.\n\n3.Проверять КМ по списку из текстового файла. Для этого отправьте мне txt файл (каждый КМ должен быть в новой строке)')
+	bot.send_message(message.from_user.id, 'Вот что я умею:\n\n1.Проверять один КМ. Для этого просто введите код маркировки.\n\n2.Проверять список КМ по номеру УПД. Для этого необходимо указать номер УПД.\n\n3.Проверять КМ по списку из текстового файла. Для этого отправьте мне txt файл (каждый КМ должен быть в новой строке)\n\n4.Статистика по подписанию Intercompany УПД за период С-ПО доступна по команде /ic_statistic')
 
 @bot.message_handler(commands=['ic_statistic']) #handle of /ic_statistic command
 def ic_statistic(message):
@@ -37,7 +37,6 @@ def ic_statistic(message):
 def date_from(message):
 	try:
 		date_from = datetime.strptime(message.text, "%d.%m.%Y")
-		bot.send_message(message.from_user.id,date_from)
 		msg = bot.send_message(message.from_user.id, 'Укажите "Дату ПО" в формате ДД.ММ.ГГГГ')
 		bot.register_next_step_handler(msg, date_to, date_from)
 	except Exception as err:
@@ -48,13 +47,15 @@ def date_from(message):
 def date_to(message, date_from):
 	try:
 		date_to = datetime.strptime(message.text, "%d.%m.%Y")
-		bot.send_message(message.from_user.id,date_to)
 	except Exception as err:
 		bot.send_message(message.from_user.id, 'Вы указали дату в неверном формате, попробуйте ещё раз, пожалуйста.')
 		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
 	if date_from > date_to:
 		bot.send_message(message.from_user.id, '"Дата С" больше "Дата ПО", попробуйте ещё раз, пожалуйста.')
+	elif (date_to-date_from).days > 7:
+		bot.send_message(message.from_user.id, 'Вы запросили статистику более чем за 7 дней. Чтобы не превысить лимит запросов к ГИСМТ, выборка должна быть не более чем за 7 дней, попробуйте ещё раз, пожалуйста.')
 	else:
+		bot.send_message(message.from_user.id, 'Ожидайте ответа...')
 		try:
 			result_file = IC_STATISTIC(date_from,date_to)
 			tmp_file = open(result_file, 'rb')
@@ -86,11 +87,11 @@ def get_first_name(message, user_data):
 
 def get_email(message, user_data):
 	user_data.append(message.text)
-	bot.send_message(message.from_user.id, 'Спасибо за регистрацию, ваша заявка принята')
 	try:
 		register_user(user_data)
 		for i in support_chat_id:
 			bot.send_message(i, 'Внимание, зарегестрирован новый пользователь')
+		bot.send_message(message.from_user.id, 'Спасибо за регистрацию, ваша заявка принята. Обратитесь, пожалуйста, в ServiceDesk для завершения модерации заявки.')
 	except Exception as err:
 		bot.send_message(message.from_user.id, 'К сожалению, регистарция не удалась. Это фиаско. Попробуйте ещё раз позднее, пожалуйста')
 		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
