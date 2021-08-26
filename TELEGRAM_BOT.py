@@ -3,17 +3,20 @@ import cx_Oracle
 import re
 import os
 import configparser
+from datetime import datetime
 from ORACLE_DB import select_MC_by_UPD, UPD_data, UIT_data, EDO_file_name
 from API_CRPT import check_mc, check_doc_status
 from CREATE_EXCEL import create_excel
 from TXT_FILE_PROCESSING import find_good_mc, find_bad_mc
+from IC_STATISTIC import IC_STATISTIC
+from TELEBOT_USERS import user_id_list,admin_user_id_list,register_user
 from GLOBAL_VAR import global_var
 
 config = configparser.ConfigParser()  # create of parser object
 config.read(global_var())
 lib_dir = config["ORACLE_DB"]["lib_dir"]  #get oracle DB connection string from settings
 telebot_token = config["TELEGRAM_BOT"]["telebot_token"] #get telebot token from settings
-support_chat_id = config["TELEGRAM_BOT"]["support_chat_id"] #get support chat id to send message in case of exception
+support_chat_id = admin_user_id_list() #get support chat id to send message in case of exception
 
 cx_Oracle.init_oracle_client(lib_dir) #initiate of oracle DB client connection
 bot = telebot.TeleBot(telebot_token) #connect to telebot
@@ -26,14 +29,80 @@ def send_welcome(message):
 def send_help(message):
 	bot.send_message(message.from_user.id, 'Вот что я умею:\n\n1.Проверять один КМ. Для этого просто введите код маркировки.\n\n2.Проверять список КМ по номеру УПД. Для этого необходимо указать номер УПД.\n\n3.Проверять КМ по списку из текстового файла. Для этого отправьте мне txt файл (каждый КМ должен быть в новой строке)')
 
+@bot.message_handler(commands=['ic_statistic']) #handle of /ic_statistic command
+def ic_statistic(message):
+	msg = bot.send_message(message.from_user.id, 'Укажите "Дату С" в формате ДД.ММ.ГГГГ')
+	bot.register_next_step_handler(msg, date_from)
+
+def date_from(message):
+	try:
+		date_from = datetime.strptime(message.text, "%d.%m.%Y")
+		bot.send_message(message.from_user.id,date_from)
+		msg = bot.send_message(message.from_user.id, 'Укажите "Дату ПО" в формате ДД.ММ.ГГГГ')
+		bot.register_next_step_handler(msg, date_to, date_from)
+	except Exception as err:
+		bot.send_message(message.from_user.id, 'Вы указали дату в неверном формате, попробуйте ещё раз, пожалуйста.')
+		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+
+
+def date_to(message, date_from):
+	try:
+		date_to = datetime.strptime(message.text, "%d.%m.%Y")
+		bot.send_message(message.from_user.id,date_to)
+	except Exception as err:
+		bot.send_message(message.from_user.id, 'Вы указали дату в неверном формате, попробуйте ещё раз, пожалуйста.')
+		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+	if date_from > date_to:
+		bot.send_message(message.from_user.id, '"Дата С" больше "Дата ПО", попробуйте ещё раз, пожалуйста.')
+	else:
+		try:
+			result_file = IC_STATISTIC(date_from,date_to)
+			tmp_file = open(result_file, 'rb')
+			bot.send_document(message.from_user.id, tmp_file)
+			tmp_file.close()
+			os.remove(result_file)
+		except Exception as err:
+			bot.send_message(message.from_user.id,	 'Вы указали дату в неверном формате, попробуйте ещё раз, пожалуйста.')
+			bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+			for i in support_chat_id:
+				bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
+
+@bot.message_handler(commands=['registration']) #handle of /registration command
+def registration(message):
+	msg = bot.send_message(message.from_user.id, 'Укажите вашу фамилию')
+	bot.register_next_step_handler(msg, get_last_name)
+
+def get_last_name(message):
+	user_data = []
+	user_data.append(message.from_user.id)
+	user_data.append(message.text)
+	msg = bot.send_message(message.from_user.id, 'Укажите ваше имя')
+	bot.register_next_step_handler(msg, get_first_name, user_data)
+
+def get_first_name(message, user_data):
+	user_data.append(message.text)
+	msg = bot.send_message(message.from_user.id, 'Укажите ваш e-mail')
+	bot.register_next_step_handler(msg, get_email, user_data)
+
+def get_email(message, user_data):
+	user_data.append(message.text)
+	bot.send_message(message.from_user.id, 'Спасибо за регистрацию, ваша заявка принята')
+	try:
+		register_user(user_data)
+		for i in support_chat_id:
+			bot.send_message(i, 'Внимание, зарегестрирован новый пользователь')
+	except Exception as err:
+		bot.send_message(message.from_user.id, 'К сожалению, регистарция не удалась. Это фиаско. Попробуйте ещё раз позднее, пожалуйста')
+		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+		for i in support_chat_id:
+			bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
+
+
 
 @bot.message_handler(content_types=["text"]) #handle of text message
 def text_message(message):
-	import configparser
-	config = configparser.ConfigParser()
-	config.read(global_var())
-	users = config["TELEGRAM_BOT"]["users"].split(';')
-	if str(message.from_user.id) not in users:   #check if user can use telebot or not
+	users = user_id_list()
+	if message.from_user.id not in users:   #check if user can use telebot or not
 		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /start')
 	else:
 		if len(re.sub("^\s+|\n|\r|\s+$", '', message.text)) == 11 and message.text[:2]=='20' and message.text.isnumeric():  #check for UPD number format
@@ -52,7 +121,8 @@ def text_message(message):
 			except Exception as err:
 				bot.send_message(message.from_user.id, 'Не удалось подключиться к БД Oracle, обратитесь в поддержку')
 				bot.send_message(message.from_user.id, 'Ошибка: '+str(err))
-				bot.send_message(support_chat_id,'Кое-кто попытался сломать бота!\n Вот это пользователь: '+str(message.from_user.id)+'\n'+str(message.from_user.first_name)+str(message.from_user.last_name)+'\n'+'Ошибка: '+str(err))
+				for i in support_chat_id:
+					bot.send_message(i,'Кое-кто попытался сломать бота!\n Вот это пользователь: '+str(message.from_user.id)+'\n'+str(message.from_user.first_name)+str(message.from_user.last_name)+'\n'+'Ошибка: '+str(err))
 			if edo_file_name !=None:
 				try:
 					doc_status = check_doc_status(edo_file_name)
@@ -67,7 +137,8 @@ def text_message(message):
 				except Exception as err:
 					bot.send_message(message.from_user.id, 'Не удалось подключиться к ГИСМТ, обратитесь в поддержку')
 					bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
-					bot.send_message(support_chat_id, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
+					for i in support_chat_id:
+						bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 			else:
 				bot.send_message(message.from_user.id, 'Указанный УПД не содержит ни одного кода маркировки')
 			if data_for_user != {}:
@@ -90,7 +161,8 @@ def text_message(message):
 			except Exception as err:
 				bot.send_message(message.from_user.id, 'Не удалось подключиться к БД Oracle, обратитесь в поддержку')
 				bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
-				bot.send_message(support_chat_id, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
+				for i in support_chat_id:
+					bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 			mc_list = []
 			mc_list.append(message.text)
 			try:
@@ -98,7 +170,8 @@ def text_message(message):
 			except Exception as err:
 				bot.send_message(message.from_user.id, 'Не удалось подключиться к ГИСМТ, обратитесь в поддержку')
 				bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
-				bot.send_message(support_chat_id, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
+				for i in support_chat_id:
+					bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 			if data_for_user == {}:   # in case user sent wrong MC
 				bot.send_message(message.from_user.id, 'Такого кода маркировки не существует в ГИСМТ')
 			else:
@@ -120,11 +193,8 @@ def text_message(message):
 
 @bot.message_handler(content_types=["document"])
 def handle_docs(message):
-	import configparser
-	config = configparser.ConfigParser()
-	config.read(global_var())
-	users = config["TELEGRAM_BOT"]["users"].split(';')
-	if str(message.from_user.id) not in users:    #check if user can use telebot or not
+	users = user_id_list()
+	if message.from_user.id not in users:    #check if user can use telebot or not
 		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /start')
 	else:
 		import configparser
@@ -154,12 +224,14 @@ def handle_docs(message):
 			except Exception as err:
 				bot.send_message(message.from_user.id, 'Не удалось подключиться к ГИСМТ, обратитесь в поддержку')
 				bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
-				bot.send_message(support_chat_id, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
+				for i in support_chat_id:
+					bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 			result_file = create_excel(mc_list_good, data_for_user, message.document.file_name + '_result.xlsx')   #creating an Excel report for user
 			tmp_file = open(result_file, 'rb')
 			bot.send_document(message.from_user.id, tmp_file)
 			tmp_file.close()
 			os.remove(result_file)
+
 
 while True:
 	try:
