@@ -39,19 +39,23 @@ def IC_STATISTIC (date_from, date_to):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.append(('FILE_NAME', 'DOCUMENT_NUMBER', 'DOCUMENT_DATE', 'DOCUMENT_CREATION_DATE', 'DOCUMENT_DATE_GISMT','DOC_STATUS_GISMT'))
+    dtime = datetime.timedelta(hours=3)
     conn = cx_Oracle.connect(conn_str)
     c = conn.cursor()
     c.execute(str1+str(date_from)+str2+str(date_to)+str3)
     for row in c:
         row = list(row)
         req = requests.get(url2 + row[0] + '/body', headers=headers)
-        doc_status = json.dumps(req.json()['downloadStatus'])
-        receipt_at = datetime.datetime.strptime(json.dumps(req.json()['receivedAt'])[1:20], '%Y-%m-%dT%H:%M:%S')
-        dtime = datetime.timedelta(hours=3)
-        receipt_at = receipt_at + dtime
+        if str(req) == '<Response [200]>':
+            doc_status = json.dumps(req.json()['downloadStatus'])
+            receipt_at = datetime.datetime.strptime(json.dumps(req.json()['receivedAt'])[1:20], '%Y-%m-%dT%H:%M:%S')
+        else:
+            doc_status = '-'
+            receipt_at = '-'
+        if receipt_at != '-':
+            receipt_at = receipt_at + dtime
         row.append(receipt_at)
         row.append(doc_status)
-        ws.append((row))
     conn.close()
     ws.auto_filter.ref = ws.dimensions
     wb.save(file_path)
