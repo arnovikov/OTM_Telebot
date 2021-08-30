@@ -56,6 +56,7 @@ def IC_STATISTIC (date_from, date_to):
             receipt_at = receipt_at + dtime
         row.append(receipt_at)
         row.append(doc_status)
+        ws.append((row))
     conn.close()
     ws.auto_filter.ref = ws.dimensions
     wb.save(file_path)
