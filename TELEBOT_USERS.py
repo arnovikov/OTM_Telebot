@@ -9,7 +9,7 @@ def user_id_list():
     wb = openpyxl.load_workbook(file_path)
     ws = wb.active
     users = []
-    for x in range(1,len(ws['A'])):
+    for x in range(1,len(ws['A'])+1):
         if ws.cell(row=x,column=ws.max_column).value == 'Enable':
             users.append(ws.cell(row=x, column=1).value)
     wb.close()
@@ -19,7 +19,7 @@ def admin_user_id_list():
     wb = openpyxl.load_workbook(file_path)
     ws = wb.active
     users = []
-    for x in range(1,len(ws['A'])):
+    for x in range(1,len(ws['A'])+1):
         if ws.cell(row=x,column=ws.max_column-1).value == 'y':
             users.append(ws.cell(row=x, column=1).value)
     wb.close()
