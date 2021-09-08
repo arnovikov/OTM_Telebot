@@ -52,8 +52,8 @@ def date_to(message, date_from):
 		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
 	if date_from > date_to:
 		bot.send_message(message.from_user.id, '"Дата С" больше "Дата ПО", попробуйте ещё раз, пожалуйста.')
-	elif (date_to-date_from).days > 7:
-		bot.send_message(message.from_user.id, 'Вы запросили статистику более чем за 7 дней. Чтобы не превысить лимит запросов к ГИСМТ, выборка должна быть не более чем за 7 дней, попробуйте ещё раз, пожалуйста.')
+	elif (date_to-date_from).days > 31:
+		bot.send_message(message.from_user.id, 'Вы запросили статистику более чем за 31 день. Чтобы не превысить лимит запросов к ГИСМТ, выборка должна быть не более чем за 31 день, попробуйте ещё раз, пожалуйста.')
 	else:
 		bot.send_message(message.from_user.id, 'Ожидайте ответа...')
 		try:
@@ -63,7 +63,7 @@ def date_to(message, date_from):
 			tmp_file.close()
 			os.remove(result_file)
 		except Exception as err:
-			bot.send_message(message.from_user.id,	 'Вы указали дату в неверном формате, попробуйте ещё раз, пожалуйста.')
+			bot.send_message(message.from_user.id,	 'К сожалению, возникла ошибка. Обратитесь, пожалуйста, в тех поддержку')
 			bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
 			for i in support_chat_id:
 				bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))

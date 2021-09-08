@@ -27,14 +27,14 @@ def IC_STATISTIC (date_from, date_to):
     file_path = str(config["CREATE_EXCEL"]["file_path"]) + date_from + '-' + date_to + '_ic_statistic_result.xlsx'
 
     str1 = """
-            SELECT file_name, DOCUMENT_NUMBER, DOCUMENT_DATE, CREATION_DATE as document_creation_date FROM XXFIN230_EDOC_OUTBOUND_INT1 
+            SELECT FILE_NAME, DOCUMENT_NUMBER, DOCUMENT_DATE, CREATION_DATE as document_creation_date FROM XXFIN230_EDOC_OUTBOUND_INT1 
             where legal_entity_id = 'NT'
             and DOC_TYPE in ('УПД') --UPD, UKD
             and file_name like '%MARK%'
-            and creation_date between '"""
+            and trunc(creation_date) between '"""
 
     str2 = """' AND '"""
-    str3 = """' order by creation_date desc"""
+    str3 = """' order by DOCUMENT_NUMBER, CREATION_DATE desc"""
 
     wb = openpyxl.Workbook()
     ws = wb.active
