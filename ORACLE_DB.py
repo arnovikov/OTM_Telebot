@@ -60,6 +60,7 @@ def UIT_data (uit):
             and mc.org_id in (82)
             and i.ORGANIZATION_ID = 110
             and tl.LINE_TYPE = 'LINE'
+            and mc.CUSTOMER_TRX_LINE_ID = tl.CUSTOMER_TRX_LINE_ID
             and tl.WAREHOUSE_ID = par.organization_id
             and t.CUSTOMER_TRX_ID = tl.CUSTOMER_TRX_ID
             and tl.attribute15 = tr.trip_id
