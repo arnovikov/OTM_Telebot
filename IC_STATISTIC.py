@@ -29,9 +29,9 @@ def IC_STATISTIC (date_from, date_to):
     str1 = """
             SELECT FILE_NAME, DOCUMENT_NUMBER, DOCUMENT_DATE, CREATION_DATE as document_creation_date FROM XXFIN230_EDOC_OUTBOUND_INT1 
             where legal_entity_id = 'NT'
-            and DOC_TYPE in ('УПД') --UPD, UKD
+            and DOC_TYPE in ('УПД') 
             and file_name like '%MARK%'
-            and trunc(creation_date) between '"""
+            and trunc(document_date) between '"""
 
     str2 = """' AND '"""
     str3 = """' order by DOCUMENT_NUMBER, CREATION_DATE desc"""
