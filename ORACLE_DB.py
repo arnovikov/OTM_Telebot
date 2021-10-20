@@ -26,14 +26,14 @@ def UPD_data(UPD_number):
     conn_str = config["ORACLE_DB"]["conn_str"]
     conn = cx_Oracle.connect(conn_str)
     str1 = """
-            select t.trx_number as TRX_NUMBER, decode(t.attribute4,'C','УКД','A','УПДи','УПД') as TRX_Type, trunc(t.trx_date) as TRX_DATE, par.ORGANIZATION_CODE as WAREHOUSE_CODE, tr.name as TRIP, p.party_name as CUSTOMER_NAME, sum(tl.quantity_invoiced) as TYRES_QTY
+            select t.trx_number as TRX_NUMBER, decode(t.attribute4,'C','УКД','A','УПДи','УПД') as TRX_Type, trunc(t.trx_date) as TRX_DATE, par.ORGANIZATION_CODE as WAREHOUSE_CODE, NVL(tr.name, 'dropshipment') as TRIP, p.party_name as CUSTOMER_NAME, sum(tl.quantity_invoiced) as TYRES_QTY
             from ra_customer_trx_all t , ra_customer_trx_lines_all tl, hz_cust_accounts ca, hz_parties p, mtl_parameters par, wsh_trips tr
             where 1=1 
             and t.org_id = 82
             and tl.LINE_TYPE = 'LINE'
             and tl.WAREHOUSE_ID = par.organization_id
             and t.CUSTOMER_TRX_ID = tl.CUSTOMER_TRX_ID
-            and tl.attribute15 = tr.trip_id
+            and tl.attribute15 = tr.trip_id (+)
             and t.SOLD_TO_CUSTOMER_ID = ca.CUST_ACCOUNT_ID
             and ca.PARTY_ID = p.PARTY_ID
             and t.TRX_NUMBER = '"""
@@ -54,7 +54,7 @@ def UIT_data (uit):
     conn_str = config["ORACLE_DB"]["conn_str"]
     conn = cx_Oracle.connect(conn_str)
     str1 = """
-            select  t.trx_number as TRX_Number, decode(t.attribute4,'C','УКД','A','УПДи','УПД') as TRX_Type, trunc(t.trx_date) as TRX_DATE, p.party_name as CUSTOMER_NAME, par.ORGANIZATION_CODE as WAREHOUSE_CODE, tr.name as TRIP, i.segment1 as ITEM_CODE, mc.SOURCE_REFERENCE, mc.SOURCE_TYPE 
+            select  t.trx_number as TRX_Number, decode(t.attribute4,'C','УКД','A','УПДи','УПД') as TRX_Type, trunc(t.trx_date) as TRX_DATE, p.party_name as CUSTOMER_NAME, par.ORGANIZATION_CODE as WAREHOUSE_CODE, NVL(tr.name, 'dropshipment') as TRIP, i.segment1 as ITEM_CODE, mc.SOURCE_REFERENCE, mc.SOURCE_TYPE 
             from xxnt.xxinv060_customer_trx_mc mc, ra_customer_trx_all t , hz_cust_accounts ca, hz_parties p, mtl_system_items i, ra_customer_trx_lines_all tl, mtl_parameters par, wsh_trips tr
             where mc.customer_trx_id = t.customer_trx_id and mc.org_id = t.org_id 
             and mc.org_id in (82)
@@ -63,7 +63,7 @@ def UIT_data (uit):
             and mc.CUSTOMER_TRX_LINE_ID = tl.CUSTOMER_TRX_LINE_ID
             and tl.WAREHOUSE_ID = par.organization_id
             and t.CUSTOMER_TRX_ID = tl.CUSTOMER_TRX_ID
-            and tl.attribute15 = tr.trip_id
+            and tl.attribute15 = tr.trip_id (+)
             and mc.INVENTORY_ITEM_ID = i.INVENTORY_ITEM_ID
             and t.SOLD_TO_CUSTOMER_ID = ca.CUST_ACCOUNT_ID
             and ca.PARTY_ID = p.PARTY_ID
