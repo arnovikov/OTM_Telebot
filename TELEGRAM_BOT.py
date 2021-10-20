@@ -6,6 +6,7 @@ import configparser
 from datetime import datetime
 from ORACLE_DB import select_MC_by_UPD, UPD_data, UIT_data, EDO_file_name
 from API_CRPT import check_mc, check_doc_status
+from API_TT import check_outs_doc_status
 from CREATE_EXCEL import create_excel
 from TXT_FILE_PROCESSING import find_good_mc, find_bad_mc
 from IC_STATISTIC import IC_STATISTIC
@@ -27,7 +28,7 @@ def send_welcome(message):
 
 @bot.message_handler(commands=['help']) #handle of /help command
 def send_help(message):
-	bot.send_message(message.from_user.id, 'Вот что я умею:\n\n1.Проверять один КМ. Для этого просто введите код маркировки.\n\n2.Проверять список КМ по номеру УПД. Для этого необходимо указать номер УПД.\n\n3.Проверять КМ по списку из текстового файла. Для этого отправьте мне txt файл (каждый КМ должен быть в новой строке)\n\n4.Статистика по подписанию Intercompany УПД за период С-ПО доступна по команде /ic_statistic')
+	bot.send_message(message.from_user.id, 'Вот что я умею:\n\n1.Проверять один КМ. Для этого просто введите код маркировки.\n\n2.Проверять список КМ по номеру УПД. Для этого необходимо указать номер УПД.\n\n3.Проверять КМ по списку из текстового файла. Для этого отправьте мне txt файл (каждый КМ должен быть в новой строке)\n\n4.Статистика по подписанию Intercompany УПД за период С-ПО доступна по команде /ic_statistic\n\n5.Проверять статус документа вывода из оборота в Track&Trace системе. Для этого необходимо указать номер документа с префиксом "outs_"')
 
 @bot.message_handler(commands=['ic_statistic']) #handle of /ic_statistic command
 def ic_statistic(message):
@@ -149,6 +150,7 @@ def text_message(message):
 				tmp_file.close()
 				os.remove(result_file)
 
+
 		elif len(re.sub("^\s+|\n|\r|\s+$", '', message.text)) == 31 and message.text[:2]=='01' and message.text[16:18]=='21':  #check for UIT marking code format
 			try:
 				bot.send_message(message.from_user.id, 'Additional UIT data:')
@@ -180,9 +182,22 @@ def text_message(message):
 				for x in data_for_user.get(message.text):  #creating a message for user with data from GISMT
 					message_result = message_result + '*'+str(x) + ':* [' + str(data_for_user.get(message.text).get(x)) + ']\n'
 				bot.send_message(message.from_user.id, message_result, parse_mode= "Markdown")
+
+		elif message.text.lower()[:5] == 'outs_':  #check for UIT marking code format
+			try:
+				doc_number = re.sub("^\s+|\n|\r|\s+$", '', message.text[5:])
+				data_for_user = check_outs_doc_status(doc_number)
+				message_result = '################' + '\n'
+				for x in data_for_user:  # creating a message for user with data from Track&Trace
+					message_result = message_result + '*' + str(x) + ':*  [' + str(data_for_user.get(x)) + ']\n'
+				message_result = message_result + '################' + '\n'
+				bot.send_message(message.from_user.id, message_result, parse_mode="Markdown")
+			except Exception as err:
+				bot.send_message(message.from_user.id, 'Не удалось найти такой документ вывода из оборота в Track&Trace. Проверьте, пожалуйста, данные')
+				bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
 		elif message.text.lower().find("привет") != -1:  #check for 'hello'
 			bot.send_sticker(message.from_user.id, 'CAACAgIAAxkBAAECo0lg_n6BDazemB16T4YlCDcrjCMeIwACUw0AAk8zeUlbToMKNIIVcCAE')
-			bot.send_message(message.from_user.id, 'Вот что я умею:\n\n1.Проверять один КМ. Для этого просто введите код маркировки.\n\n2.Проверять список КМ по номеру УПД. Для этого необходимо указать номер УПД.\n\n3.Проверять КМ по списку из текстового файла. Для этого отправьте мне txt файл (каждый КМ должен быть в новой строке)')
+			bot.send_message(message.from_user.id, 'Привет, ' + message.from_user.first_name + '!\n\nВы попали в гости к боту по проверке кодов маркировки.\n\nДля того, чтобы узнать на что способен этот бот, используйте команду /help')
 		elif message.text.lower().find("дурак") != -1 or message.text.lower().find("тупой") != -1 or message.text.lower().find("тупица") != -1:  #check for rude
 			bot.send_sticker(message.from_user.id, 'CAACAgIAAxkBAAECoyxg_nynhc34Q3XdDGp0BpKLZdoV-wAClQUAAiMFDQABt0k_ZMWu768gBA')
 		elif message.text.lower().find("класс") != -1 or message.text.lower().find("супер") != -1 or message.text.lower().find("спасибо") != -1:  #check for thanks
