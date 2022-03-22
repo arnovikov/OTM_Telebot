@@ -8,7 +8,7 @@ from ORACLE_DB import select_MC_by_UPD, UPD_data, UIT_data, EDO_file_name
 from API_CRPT import check_mc, check_doc_status
 from API_TT import check_outs_doc_status
 from CREATE_EXCEL import create_excel
-from TXT_FILE_PROCESSING import find_good_mc, find_bad_mc
+from TXT_FILE_PROCESSING import find_good_mc, find_bad_mc, usage_log
 from IC_STATISTIC import IC_STATISTIC
 from TELEBOT_USERS import user_id_list,admin_user_id_list,register_user
 from GLOBAL_VAR import global_var
@@ -107,6 +107,8 @@ def text_message(message):
 	if message.from_user.id not in users:   #check if user can use telebot or not
 		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /start')
 	else:
+		log_data = str(message.from_user.id)+'\t'+str(message.from_user.first_name)+'\t'+str(message.from_user.last_name)+'\t'+str(datetime.now().strftime("%d-%m-%Y %H:%M"))+'\t'+str(message.text)+'\n'
+		usage_log(log_data)
 		if len(re.sub("^\s+|\n|\r|\s+$", '', message.text)) == 11 and message.text[:2]=='20' and message.text.isnumeric():  #check for UPD number format
 			try:
 				upd_data = UPD_data(message.text)  #run procedure to get additional data from Oracle DB
@@ -213,6 +215,8 @@ def handle_docs(message):
 	if message.from_user.id not in users:    #check if user can use telebot or not
 		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /start')
 	else:
+		log_data = str(message.from_user.id) + '\t' + str(message.from_user.first_name) + '\t' + str(message.from_user.last_name) + '\t' + str(datetime.now().strftime("%d-%m-%Y %H:%M")) + '\t' + str(message.document.file_name) + '\n'
+		usage_log(log_data)
 		import configparser
 		config = configparser.ConfigParser()
 		config.read(global_var())

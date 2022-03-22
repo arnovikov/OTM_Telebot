@@ -1,4 +1,5 @@
 import re
+from GLOBAL_VAR import global_var
 def find_good_mc(dowloaded_file_path):
     file = open(dowloaded_file_path, 'r')
     mc_list_good = []
@@ -24,3 +25,12 @@ def find_bad_mc(dowloaded_file_path):
         count = count + 1
     file.close()
     return (mc_list_bad)
+
+def usage_log(data):
+    import configparser
+    config = configparser.ConfigParser()
+    config.read(global_var())
+    file_path = config["TXT_FILE_PROCESSING"]["file_path"]
+    file = open(file_path, 'a')
+    file.write(data)
+    file.close()
