@@ -6,7 +6,7 @@ import configparser
 from datetime import datetime
 from ORACLE_DB import select_MC_by_UPD, UPD_data, UIT_data, EDO_file_name
 from API_CRPT import check_mc, check_doc_status
-from API_TT import check_outs_doc_status
+from API_TT import check_outs_doc_status, nt_mc_status_update
 from CREATE_EXCEL import create_excel
 from TXT_FILE_PROCESSING import find_good_mc, find_bad_mc, usage_log
 from IC_STATISTIC import IC_STATISTIC
@@ -239,18 +239,29 @@ def handle_docs(message):
 			bot.send_message(message.from_user.id, 'File has ' + str(len(mc_list_good)) + ' MCs')
 			bot.send_message(message.from_user.id, 'Bad MCs: ' + str(mc_list_bad))
 			bot.send_message(message.from_user.id, 'Ожидайте ответа...')
-			try:
-				data_for_user = check_mc(mc_list_good)  #sending marking codes from txt file to GISMT in order to check them
-			except Exception as err:
-				bot.send_message(message.from_user.id, 'Не удалось подключиться к ГИСМТ, обратитесь в поддержку')
-				bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
-				for i in support_chat_id:
-					bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
-			result_file = create_excel(mc_list_good, data_for_user, message.document.file_name + '_result.xlsx')   #creating an Excel report for user
-			tmp_file = open(result_file, 'rb')
-			bot.send_document(message.from_user.id, tmp_file)
-			tmp_file.close()
-			os.remove(result_file)
+			subst = filename.lower().find('nt_status_update')
+			if subst != -1:
+				try:
+					data_for_user = str(nt_mc_status_update(mc_list_good))
+					bot.send_message(message.from_user.id, data_for_user)
+				except Exception as err:
+					bot.send_message(message.from_user.id, 'Не удалось подключиться к T&T, обратитесь в поддержку')
+					bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+					for i in support_chat_id:
+						bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
+			else:
+				try:
+					data_for_user = check_mc(mc_list_good)  #sending marking codes from txt file to GISMT in order to check them
+				except Exception as err:
+					bot.send_message(message.from_user.id, 'Не удалось подключиться к ГИСМТ, обратитесь в поддержку')
+					bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+					for i in support_chat_id:
+						bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
+				result_file = create_excel(mc_list_good, data_for_user, message.document.file_name + '_result.xlsx')   #creating an Excel report for user
+				tmp_file = open(result_file, 'rb')
+				bot.send_document(message.from_user.id, tmp_file)
+				tmp_file.close()
+				os.remove(result_file)
 
 
 while True:

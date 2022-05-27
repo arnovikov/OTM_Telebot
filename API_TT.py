@@ -5,7 +5,7 @@ def check_outs_doc_status(doc_number):
     config = configparser.ConfigParser()
     config.read(global_var())
     url = config["API_TT"]["url_check_out_doc"]
-    token_path = config["API_TT"]["token_path"]
+    token_path = config["API_TT"]["ns_token_path"]
     token_file = open(token_path, 'r', encoding='utf_16')
     bearer = token_file.read()
     token_file.close()
@@ -25,7 +25,7 @@ def get_CRPT_token():
     config = configparser.ConfigParser()
     config.read(global_var())
     url = config["API_TT"]["url_get_CRPT_token"]
-    token_path = config["API_TT"]["token_path"]
+    token_path = config["API_TT"]["ns_token_path"]
     token_file = open(token_path, 'r', encoding='utf_16')
     bearer = token_file.read()
     token_file.close()
@@ -33,3 +33,30 @@ def get_CRPT_token():
     request = requests.get(url, headers=headers)
     token = request.json()['token']
     return token
+
+def nt_mc_status_update (mc_list):
+    import requests
+    import configparser
+    import time
+    import json
+    config = configparser.ConfigParser()
+    config.read(global_var())
+    url = config["API_TT"]["url_mc_status_update"]
+    token_path = config["API_TT"]["nt_token_path"]
+    mc_amount_to_update = int(config["API_TT"]["mc_amount_to_update"])
+    status = config["API_TT"]["mrkSystemStatus"]
+    token_file = open(token_path, 'r', encoding='utf_16')
+    bearer = token_file.read()
+    token_file.close()
+    data = {}
+    count = 1
+    num_of_runs = len(mc_list) // mc_amount_to_update + 1
+    for run in range(num_of_runs):
+        headers = {'X-Auth-Token': 'Bearer ' + bearer, 'Content-Type': 'application/json', 'x-warehouse-name': 'NT_PROD'}
+        body = {"mrkSystemStatus":status, "searchRequest": {"uits": mc_list[(count - 1) * mc_amount_to_update:count * mc_amount_to_update]}}
+        req = requests.post(url, headers=headers, data=json.dumps(body))
+        data_run = json.loads(req.text)
+        data = {**data, **data_run}
+        count = count + 1
+        time.sleep(5)
+    return data
