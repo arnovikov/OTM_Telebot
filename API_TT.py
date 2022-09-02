@@ -45,6 +45,7 @@ def nt_mc_status_update (mc_list):
     token_path = config["API_TT"]["nt_token_path"]
     mc_amount_to_update = int(config["API_TT"]["mc_amount_to_update"])
     status = config["API_TT"]["mrkSystemStatus"]
+    warehouse = config["API_TT"]["warehouse"]
     token_file = open(token_path, 'r', encoding='utf_16')
     bearer = token_file.read()
     token_file.close()
@@ -52,7 +53,7 @@ def nt_mc_status_update (mc_list):
     count = 1
     num_of_runs = len(mc_list) // mc_amount_to_update + 1
     for run in range(num_of_runs):
-        headers = {'X-Auth-Token': 'Bearer ' + bearer, 'Content-Type': 'application/json', 'x-warehouse-name': 'NT_PROD'}
+        headers = {'X-Auth-Token': 'Bearer ' + bearer, 'Content-Type': 'application/json', 'x-warehouse-name': warehouse}
         body = {"mrkSystemStatus":status, "searchRequest": {"uits": mc_list[(count - 1) * mc_amount_to_update:count * mc_amount_to_update]}}
         req = requests.post(url, headers=headers, data=json.dumps(body))
         data_run = json.loads(req.text)
