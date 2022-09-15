@@ -9,7 +9,7 @@ from ORACLE_DB import select_MC_by_UPD, UPD_data, UIT_data, EDO_file_name
 from API_CRPT import check_mc, check_doc_status, create_upload_task, get_upload_task_status, get_result_id, get_result_file
 from API_TT import check_outs_doc_status, nt_mc_status_update
 from CREATE_EXCEL import create_excel
-from TXT_FILE_PROCESSING import find_good_mc, find_bad_mc, usage_log
+from TXT_FILE_PROCESSING import find_good_mc, find_bad_mc, usage_log, csv_to_txt
 from IC_STATISTIC import IC_STATISTIC
 from TELEBOT_USERS import user_id_list,admin_user_id_list,register_user
 from GLOBAL_VAR import global_var
@@ -276,21 +276,7 @@ def text_message(message):
 			zip_file.close()
 			os.remove(downloaded_file_path)  #delete zip file
 			csv_file_path = directory_to_extract +'/'+zip_file_name
-			file = open(csv_file_path, 'r', encoding='utf-8')
-			MC_list =[]
-			count = 0
-			s = file.readline()
-			while s != '':
-			    if s[:6] == """"01064""":
-			        MC_list.append(s[1:32])
-			    s = file.readline()
-			    count = count + 1
-			file.close()
-			os.remove(csv_file_path)
-			file = open(csv_file_path.replace(".csv", ".txt"),'w')
-			for s in MC_list:
-			    file.write("%s\n" % s)
-			file.close()
+			csv_to_txt(csv_file_path)  #run function to convert csv to txt
 			tmp_file = open(csv_file_path.replace(".csv", ".txt"), 'rb')
 			bot.send_message(message.from_user.id, 'Вот лайтовая версия:')
 			bot.send_document(message.from_user.id, tmp_file)
