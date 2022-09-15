@@ -1,17 +1,20 @@
 import telebot
+from telebot import types
 import cx_Oracle
 import re
 import os
 import configparser
 from datetime import datetime
 from ORACLE_DB import select_MC_by_UPD, UPD_data, UIT_data, EDO_file_name
-from API_CRPT import check_mc, check_doc_status
+from API_CRPT import check_mc, check_doc_status, create_upload_task, get_upload_task_status, get_result_id, get_result_file
 from API_TT import check_outs_doc_status, nt_mc_status_update
 from CREATE_EXCEL import create_excel
 from TXT_FILE_PROCESSING import find_good_mc, find_bad_mc, usage_log
 from IC_STATISTIC import IC_STATISTIC
 from TELEBOT_USERS import user_id_list,admin_user_id_list,register_user
 from GLOBAL_VAR import global_var
+from fnmatch import fnmatch
+import zipfile
 
 config = configparser.ConfigParser()  # create of parser object
 config.read(global_var())
@@ -28,7 +31,7 @@ def send_welcome(message):
 
 @bot.message_handler(commands=['help']) #handle of /help command
 def send_help(message):
-	bot.send_message(message.from_user.id, 'Вот что я умею:\n\n1.Проверять один КМ. Для этого просто введите код маркировки.\n\n2.Проверять список КМ по номеру УПД. Для этого необходимо указать номер УПД.\n\n3.Проверять КМ по списку из текстового файла. Для этого отправьте мне txt файл (каждый КМ должен быть в новой строке)\n\n4.Статистика по подписанию Intercompany УПД за период С-ПО доступна по команде /ic_statistic\n\n5.Проверять статус документа вывода из оборота в Track&Trace системе. Для этого необходимо указать номер документа с префиксом "outs_"')
+	bot.send_message(message.from_user.id, 'Вот что я умею:\n\n1.Проверять один КМ. Для этого просто введите код маркировки.\n\n2.Проверять список КМ по номеру УПД. Для этого необходимо указать номер УПД.\n\n3.Проверять КМ по списку из текстового файла. Для этого отправьте мне txt файл (каждый КМ должен быть в новой строке)\n\n4.Статистика по подписанию Intercompany УПД за период С-ПО доступна по команде /ic_statistic\n\n5.Проверять статус документа вывода из оборота в Track&Trace системе. Для этого необходимо указать номер документа с префиксом "outs_"\n\n6. Создать задачу на выгрузку КМ в ГИСМТ - команда /gismt_task')
 
 @bot.message_handler(commands=['ic_statistic']) #handle of /ic_statistic command
 def ic_statistic(message):
@@ -99,6 +102,58 @@ def get_email(message, user_data):
 		for i in support_chat_id:
 			bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 
+@bot.message_handler(commands=['gismt_task']) #handle of /gismt_task command
+def GISMT_task(message):
+	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+	btn1 = types.KeyboardButton("EMITTED")
+	btn2 = types.KeyboardButton("APPLIED")
+	btn3 = types.KeyboardButton("INTRODUCED")
+	btn4 = types.KeyboardButton("WRITTEN_OFF")
+	btn5 = types.KeyboardButton("RETIRED")
+	markup.add(btn1, btn2, btn3, btn4, btn5)
+	msg = bot.send_message(message.chat.id, text="Пожалуйста, выберете статус кодов маркировки для выгрузки.", reply_markup=markup)
+	bot.register_next_step_handler(msg, get_MC_status)
+
+def get_MC_status(message):
+	user_data = []
+	user_data.append(message.text)
+	msg = bot.send_message(message.chat.id, text='Укажите "Дату эмиссии С" в формате ДД.ММ.ГГГГ', reply_markup=types.ReplyKeyboardRemove())
+	bot.register_next_step_handler(msg, get_start_date, user_data)
+
+def get_start_date(message,user_data):
+	try:
+		start_date = datetime.strptime(message.text, "%d.%m.%Y")
+		start_date_str = str(start_date)[:10]
+		user_data.append(start_date_str)
+		msg = bot.send_message(message.from_user.id, 'Укажите "Дату эмиссии ПО" в формате ДД.ММ.ГГГГ')
+		bot.register_next_step_handler(msg, get_end_date, user_data, start_date)
+	except Exception as err:
+		bot.send_message(message.from_user.id, 'Вы указали дату в неверном формате, попробуйте ещё раз, пожалуйста.')
+		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+		msg = bot.send_message(message.from_user.id, 'Укажите "Дату эмиссии C" в формате ДД.ММ.ГГГГ')
+		bot.register_next_step_handler(msg, get_start_date, user_data)
+
+def get_end_date(message, user_data, start_date):
+	try:
+		end_date = datetime.strptime(message.text, "%d.%m.%Y")
+	except Exception as err:
+		bot.send_message(message.from_user.id, 'Вы указали дату в неверном формате, попробуйте ещё раз, пожалуйста.')
+		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+		msg = bot.send_message(message.from_user.id, 'Укажите "Дату эмиссии ПО" в формате ДД.ММ.ГГГГ')
+		bot.register_next_step_handler(msg, get_end_date, user_data, start_date)
+	if end_date < start_date:
+		bot.send_message(message.from_user.id, '"Дата С" больше "Дата ПО", попробуйте ещё раз, пожалуйста.')
+		msg = bot.send_message(message.from_user.id, 'Укажите "Дату эмиссии ПО" в формате ДД.ММ.ГГГГ')
+		bot.register_next_step_handler(msg, get_end_date, user_data, start_date)
+	elif (end_date-start_date).days > 185:
+		bot.send_message(message.from_user.id, 'Вы запросили статистику более чем за пол года. ГИСМТ такого не вывозит. Попробуйте сократить диапазон (максимум пол года).')
+		msg = bot.send_message(message.from_user.id, 'Укажите "Дату эмиссии ПО" в формате ДД.ММ.ГГГГ')
+		bot.register_next_step_handler(msg, get_end_date, user_data, start_date)
+	else:
+		end_date_str = str(end_date)[:10]
+		user_data.append(end_date_str)
+		task_id = create_upload_task(user_data[0],user_data[1],user_data[2])
+		bot.send_message(message.from_user.id, 'Задача на выгрузку данных успешно размещена в ГИСМТ, используйте этот ID для проверки статуса задания: '+task_id)
 
 
 @bot.message_handler(content_types=["text"]) #handle of text message
@@ -197,6 +252,50 @@ def text_message(message):
 			except Exception as err:
 				bot.send_message(message.from_user.id, 'Не удалось найти такой документ вывода из оборота в Track&Trace. Проверьте, пожалуйста, данные')
 				bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+		elif fnmatch(message.text, '????????-????-????-????-????????????') == True:
+			gismt_task_status = get_upload_task_status(message.text)
+			bot.send_message(message.from_user.id, 'Status of task ' + message.text + ' is ' + gismt_task_status)
+			if gismt_task_status == '"COMPLETED"':
+				markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+				btn1 = types.KeyboardButton("DOWNLOAD_"+message.text)
+				markup.add(btn1)
+				bot.send_message(message.from_user.id, 'Скачать файл?', reply_markup=markup)
+		elif fnmatch(message.text, 'DOWNLOAD_????????-????-????-????-????????????') == True:
+			bot.send_message(message.from_user.id, 'Скачивание началось, ожидайте', reply_markup=types.ReplyKeyboardRemove())
+			task_id = message.text[9:]
+			result_id = get_result_id(task_id)
+			downloaded_file_path = get_result_file(result_id)
+			tmp_file = open(downloaded_file_path, 'rb')
+			bot.send_message(message.from_user.id, 'Вот исходник:')
+			bot.send_document(message.from_user.id, tmp_file)
+			tmp_file.close()
+			zip_file = zipfile.ZipFile(downloaded_file_path, 'r')
+			zip_file_name = zip_file.infolist()[0].filename
+			directory_to_extract = os.path.dirname(downloaded_file_path)
+			zip_file.extractall(directory_to_extract)
+			zip_file.close()
+			os.remove(downloaded_file_path)  #delete zip file
+			csv_file_path = directory_to_extract +'/'+zip_file_name
+			file = open(csv_file_path, 'r', encoding='utf-8')
+			MC_list =[]
+			count = 0
+			s = file.readline()
+			while s != '':
+			    if s[:6] == """"01064""":
+			        MC_list.append(s[1:32])
+			    s = file.readline()
+			    count = count + 1
+			file.close()
+			os.remove(csv_file_path)
+			file = open(csv_file_path.replace(".csv", ".txt"),'w')
+			for s in MC_list:
+			    file.write("%s\n" % s)
+			file.close()
+			tmp_file = open(csv_file_path.replace(".csv", ".txt"), 'rb')
+			bot.send_message(message.from_user.id, 'Вот лайтовая версия:')
+			bot.send_document(message.from_user.id, tmp_file)
+			tmp_file.close()
+			os.remove(csv_file_path.replace(".csv", ".txt"))
 		elif message.text.lower().find("привет") != -1:  #check for 'hello'
 			bot.send_sticker(message.from_user.id, 'CAACAgIAAxkBAAECo0lg_n6BDazemB16T4YlCDcrjCMeIwACUw0AAk8zeUlbToMKNIIVcCAE')
 			bot.send_message(message.from_user.id, 'Привет, ' + message.from_user.first_name + '!\n\nВы попали в гости к боту по проверке кодов маркировки.\n\nДля того, чтобы узнать на что способен этот бот, используйте команду /help')
