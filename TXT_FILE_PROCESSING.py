@@ -40,13 +40,15 @@ def usage_log(data):
 def csv_to_txt(csv_file_path):
     file = open(csv_file_path, 'r', encoding='utf-8')
     MC_list = []
-    count = 0
     s = file.readline()
     while s != '':
         if s[:6] == """"01064""":
-            MC_list.append(s[1:32])
+            pos = s.find('","'+s[3:17])
+            if s[1:pos].find('"') != -1:
+                MC_list.append(s[1:pos].replace('""', '"'))
+            else:
+                MC_list.append(s[1:pos])
         s = file.readline()
-        count = count + 1
     file.close()
     os.remove(csv_file_path)
     file = open(csv_file_path.replace(".csv", ".txt"), 'w')
