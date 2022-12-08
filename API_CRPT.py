@@ -53,44 +53,48 @@ def check_doc_status(doc_id):
     doc_status = json.dumps(req.json()['downloadStatus'])
     return doc_status
 
-def create_upload_task(status,start_date,end_date):
+def create_upload_task(business_unit,status,start_date,end_date):
     config = configparser.ConfigParser()
     config.read(global_var())
+    if business_unit == 'NT':
+        inn = config["API_CRPT"]["NT_INN"]
+    else:
+        inn = config["API_CRPT"]["NS_INN"]
     url = config["API_CRPT"]["url_create_upload_task"]
-    bearer = get_CRPT_token()
+    bearer = get_CRPT_token(business_unit)
     headers = {'Authorization': 'Bearer ' + bearer, 'content-type': 'application/json'}
-    body = {"format": "CSV", "name": "FILTERED_CIS_REPORT", "periodicity": "SINGLE", "productGroupCode": "5","params": "{\"participantInn\":\"7816162305\",\"packageType\":[\"UNIT\",\"LEVEL1\"],\"status\":\"" + status + "\",\"emissionPeriod\":{\"start\":\"" + start_date + "T08:02:30.577395Z\",\"end\":\"" + end_date + "T08:02:30.577395Z\"}}"}
+    body = {"format": "CSV", "name": "FILTERED_CIS_REPORT", "periodicity": "SINGLE", "productGroupCode": "5","params": "{\"participantInn\":\"" + inn + "\",\"packageType\":[\"UNIT\",\"LEVEL1\"],\"status\":\"" + status + "\",\"emissionPeriod\":{\"start\":\"" + start_date + "T00:00:01.577395Z\",\"end\":\"" + end_date + "T00:00:01.577395Z\"}}"}
     request = requests.post(url, headers=headers, json=body)
-    task_id = json.dumps(request.json()['id'])
+    task_id = json.dumps(request.json()['id'])[1 : -1]
     return task_id
 
-def get_upload_task_status(task_id):
+def get_upload_task_status(business_unit,task_id):
     config = configparser.ConfigParser()
     config.read(global_var())
     url = config["API_CRPT"]["url_get_upload_task_status"] + task_id
-    bearer = get_CRPT_token()
+    bearer = get_CRPT_token(business_unit)
     headers = {'Authorization': 'Bearer ' + bearer, 'content-type': 'application/json'}
     params = {"pg":"5"}
     request = requests.get(url, headers=headers, params=params)
     task_status = json.dumps(request.json()['currentStatus'])
     return task_status
 
-def get_result_id(task_id):
+def get_result_id(business_unit,task_id):
     config = configparser.ConfigParser()
     config.read(global_var())
     url = config["API_CRPT"]["url_get_result_id"]
-    bearer = get_CRPT_token()
+    bearer = get_CRPT_token(business_unit)
     headers = {'Authorization': 'Bearer ' + bearer, 'content-type': 'application/json'}
     params = {'page':'0','size':'10','pg':'5','task_ids':[''+task_id+'']}
     request = requests.get(url, headers=headers, params=params )
     result_id = json.dumps(request.json()['list'][0]['id']).replace('"','')
     return result_id
 
-def get_result_file(result_id):
+def get_result_file(business_unit,result_id):
     config = configparser.ConfigParser()
     config.read(global_var())
     url = config["API_CRPT"]["url_download_result_file"]+result_id+'/file'
-    bearer = get_CRPT_token()
+    bearer = get_CRPT_token(business_unit)
     headers = {'Authorization': 'Bearer ' + bearer}
     downloaded_file_path = str(config["TELEGRAM_BOT"]["file_path"]+"result_"+result_id+".zip")
     file = open (downloaded_file_path, 'wb')

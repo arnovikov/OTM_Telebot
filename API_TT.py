@@ -19,13 +19,16 @@ def check_outs_doc_status(doc_number):
     data_for_user = {'guid': guid, 'checkStatus': checkStatus, 'action': action, 'outDocType': outDocType}
     return data_for_user
 
-def get_CRPT_token():
+def get_CRPT_token(business_unit='NS'):
     import requests
     import configparser
     config = configparser.ConfigParser()
     config.read(global_var())
     url = config["API_TT"]["url_get_CRPT_token"]
-    token_path = config["API_TT"]["ns_token_path"]
+    if business_unit == 'NT':
+        token_path = config["API_TT"]["nt_token_path"]
+    else:
+        token_path = config["API_TT"]["ns_token_path"]
     token_file = open(token_path, 'r', encoding='utf_16')
     bearer = token_file.read()
     token_file.close()

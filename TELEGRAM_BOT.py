@@ -105,6 +105,15 @@ def get_email(message, user_data):
 @bot.message_handler(commands=['gismt_task']) #handle of /gismt_task command
 def GISMT_task(message):
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+	btn1 = types.KeyboardButton("NS")
+	btn2 = types.KeyboardButton("NT")
+	markup.add(btn1, btn2)
+	msg = bot.send_message(message.chat.id, text="Пожалуйста, выберете бизнес-юнит, по которому требуется выгрузка данных.", reply_markup=markup)
+	bot.register_next_step_handler(msg, get_business_unit)
+
+def get_business_unit(message):
+	user_data = [message.text]
+	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	btn1 = types.KeyboardButton("EMITTED")
 	btn2 = types.KeyboardButton("APPLIED")
 	btn3 = types.KeyboardButton("INTRODUCED")
@@ -112,10 +121,9 @@ def GISMT_task(message):
 	btn5 = types.KeyboardButton("RETIRED")
 	markup.add(btn1, btn2, btn3, btn4, btn5)
 	msg = bot.send_message(message.chat.id, text="Пожалуйста, выберете статус кодов маркировки для выгрузки.", reply_markup=markup)
-	bot.register_next_step_handler(msg, get_MC_status)
+	bot.register_next_step_handler(msg, get_MC_status, user_data)
 
-def get_MC_status(message):
-	user_data = []
+def get_MC_status(message,user_data):
 	user_data.append(message.text)
 	msg = bot.send_message(message.chat.id, text='Укажите "Дату эмиссии С" в формате ДД.ММ.ГГГГ', reply_markup=types.ReplyKeyboardRemove())
 	bot.register_next_step_handler(msg, get_start_date, user_data)
@@ -152,8 +160,8 @@ def get_end_date(message, user_data, start_date):
 	else:
 		end_date_str = str(end_date)[:10]
 		user_data.append(end_date_str)
-		task_id = create_upload_task(user_data[0],user_data[1],user_data[2])
-		bot.send_message(message.from_user.id, 'Задача на выгрузку данных успешно размещена в ГИСМТ, используйте этот ID для проверки статуса задания: '+task_id)
+		task_id = create_upload_task(user_data[0],user_data[1],user_data[2],user_data[3])
+		bot.send_message(message.from_user.id, 'Задача на выгрузку данных успешно размещена в ГИСМТ, используйте этот ID для проверки статуса задания: \n\n'+ str(user_data[0])+'_'+task_id)
 
 
 @bot.message_handler(content_types=["text"]) #handle of text message
@@ -252,36 +260,31 @@ def text_message(message):
 			except Exception as err:
 				bot.send_message(message.from_user.id, 'Не удалось найти такой документ вывода из оборота в Track&Trace. Проверьте, пожалуйста, данные')
 				bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
-		elif fnmatch(message.text, '????????-????-????-????-????????????') == True:
-			gismt_task_status = get_upload_task_status(message.text)
+		elif fnmatch(message.text, '??_????????-????-????-????-????????????') == True:  #check for GISMT_task_id
+			gismt_task_status = get_upload_task_status(message.text[:2], message.text[3:])
 			bot.send_message(message.from_user.id, 'Status of task ' + message.text + ' is ' + gismt_task_status)
 			if gismt_task_status == '"COMPLETED"':
-				markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-				btn1 = types.KeyboardButton("DOWNLOAD_"+message.text)
-				markup.add(btn1)
-				bot.send_message(message.from_user.id, 'Скачать файл?', reply_markup=markup)
-		elif fnmatch(message.text, 'DOWNLOAD_????????-????-????-????-????????????') == True:
-			bot.send_message(message.from_user.id, 'Скачивание началось, ожидайте', reply_markup=types.ReplyKeyboardRemove())
-			task_id = message.text[9:]
-			result_id = get_result_id(task_id)
-			downloaded_file_path = get_result_file(result_id)
-			tmp_file = open(downloaded_file_path, 'rb')
-			bot.send_message(message.from_user.id, 'Вот исходник:')
-			bot.send_document(message.from_user.id, tmp_file)
-			tmp_file.close()
-			zip_file = zipfile.ZipFile(downloaded_file_path, 'r')
-			zip_file_name = zip_file.infolist()[0].filename
-			directory_to_extract = os.path.dirname(downloaded_file_path)
-			zip_file.extractall(directory_to_extract)
-			zip_file.close()
-			os.remove(downloaded_file_path)  #delete zip file
-			csv_file_path = directory_to_extract +'/'+zip_file_name
-			csv_to_txt(csv_file_path)  #run function to convert csv to txt
-			tmp_file = open(csv_file_path.replace(".csv", ".txt"), 'rb')
-			bot.send_message(message.from_user.id, 'Вот лайтовая версия:')
-			bot.send_document(message.from_user.id, tmp_file)
-			tmp_file.close()
-			os.remove(csv_file_path.replace(".csv", ".txt"))
+				bot.send_message(message.from_user.id, 'Скачивание файла началось, ожидайте', reply_markup=types.ReplyKeyboardRemove())
+				result_id = get_result_id(message.text[:2], message.text[3:])
+				downloaded_file_path = get_result_file(message.text[:2],result_id)
+				tmp_file = open(downloaded_file_path, 'rb')
+				bot.send_message(message.from_user.id, 'Вот исходник:')
+				bot.send_document(message.from_user.id, tmp_file)
+				tmp_file.close()
+				zip_file = zipfile.ZipFile(downloaded_file_path, 'r')
+				zip_file_name = zip_file.infolist()[0].filename
+				directory_to_extract = os.path.dirname(downloaded_file_path)
+				zip_file.extractall(directory_to_extract)
+				zip_file.close()
+				os.remove(downloaded_file_path)  # delete zip file
+				csv_file_path = directory_to_extract + '/' + zip_file_name
+				csv_to_txt(csv_file_path)  # run function to convert csv to txt
+				tmp_file = open(csv_file_path.replace(".csv", ".txt"), 'rb')
+				bot.send_message(message.from_user.id, 'Вот лайтовая версия:')
+				bot.send_document(message.from_user.id, tmp_file)
+				tmp_file.close()
+				os.remove(csv_file_path.replace(".csv", ".txt"))
+
 		elif message.text.lower().find("привет") != -1:  #check for 'hello'
 			bot.send_sticker(message.from_user.id, 'CAACAgIAAxkBAAECo0lg_n6BDazemB16T4YlCDcrjCMeIwACUw0AAk8zeUlbToMKNIIVcCAE')
 			bot.send_message(message.from_user.id, 'Привет, ' + message.from_user.first_name + '!\n\nВы попали в гости к боту по проверке кодов маркировки.\n\nДля того, чтобы узнать на что способен этот бот, используйте команду /help')
