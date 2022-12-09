@@ -112,6 +112,9 @@ def GISMT_task(message):
 	bot.register_next_step_handler(msg, get_business_unit)
 
 def get_business_unit(message):
+	if message.text == '/reset':
+		bot.send_message(message.from_user.id, 'Каждый имеет право на ошибку, можете опробовать ещё раз')
+		exit()
 	user_data = [message.text]
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	btn1 = types.KeyboardButton("EMITTED")
@@ -124,6 +127,9 @@ def get_business_unit(message):
 	bot.register_next_step_handler(msg, get_MC_status, user_data)
 
 def get_MC_status(message,user_data):
+	if message.text == '/reset':
+		bot.send_message(message.from_user.id, 'Каждый имеет право на ошибку, можете опробовать ещё раз')
+		exit()
 	user_data.append(message.text)
 	msg = bot.send_message(message.chat.id, text='Укажите "Дату эмиссии С" в формате ДД.ММ.ГГГГ', reply_markup=types.ReplyKeyboardRemove())
 	bot.register_next_step_handler(msg, get_start_date, user_data)
@@ -136,6 +142,9 @@ def get_start_date(message,user_data):
 		msg = bot.send_message(message.from_user.id, 'Укажите "Дату эмиссии ПО" в формате ДД.ММ.ГГГГ')
 		bot.register_next_step_handler(msg, get_end_date, user_data, start_date)
 	except Exception as err:
+		if message.text == '/reset':
+			bot.send_message(message.from_user.id,'Каждый имеет право на ошибку, можете опробовать ещё раз')
+			exit()
 		bot.send_message(message.from_user.id, 'Вы указали дату в неверном формате, попробуйте ещё раз, пожалуйста.')
 		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
 		msg = bot.send_message(message.from_user.id, 'Укажите "Дату эмиссии C" в формате ДД.ММ.ГГГГ')
@@ -145,6 +154,9 @@ def get_end_date(message, user_data, start_date):
 	try:
 		end_date = datetime.strptime(message.text, "%d.%m.%Y")
 	except Exception as err:
+		if message.text == '/reset':
+			bot.send_message(message.from_user.id,'Каждый имеет право на ошибку, можете опробовать ещё раз')
+			exit()
 		bot.send_message(message.from_user.id, 'Вы указали дату в неверном формате, попробуйте ещё раз, пожалуйста.')
 		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
 		msg = bot.send_message(message.from_user.id, 'Укажите "Дату эмиссии ПО" в формате ДД.ММ.ГГГГ')
