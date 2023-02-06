@@ -1,6 +1,6 @@
 import telebot
 from telebot import types
-import cx_Oracle
+#import cx_Oracle
 import re
 import os
 import configparser
@@ -11,18 +11,18 @@ from API_TT import check_outs_doc_status, nt_mc_status_update
 from CREATE_EXCEL import create_excel
 from TXT_FILE_PROCESSING import find_good_mc, find_bad_mc, usage_log, csv_to_txt
 from IC_STATISTIC import IC_STATISTIC
-from TELEBOT_USERS import user_id_list,admin_user_id_list,register_user
+#from TELEBOT_USERS import user_id_list,admin_user_id_list,register_user
+from POSTGRESQL_DB import check_user, admin_user_id_list, register_user, usage_log
 from GLOBAL_VAR import global_var
 from fnmatch import fnmatch
 import zipfile
 
 config = configparser.ConfigParser()  # create of parser object
 config.read(global_var())
-lib_dir = config["ORACLE_DB"]["lib_dir"]  #get oracle DB connection string from settings
+#lib_dir = config["ORACLE_DB"]["lib_dir"]  #get oracle DB connection string from settings
 telebot_token = config["TELEGRAM_BOT"]["telebot_token"] #get telebot token from settings
-support_chat_id = admin_user_id_list() #get support chat id to send message in case of exception
 
-cx_Oracle.init_oracle_client(lib_dir) #initiate of oracle DB client connection
+#cx_Oracle.init_oracle_client(lib_dir) #initiate of oracle DB client connection
 bot = telebot.TeleBot(telebot_token) #connect to telebot
 
 @bot.message_handler(commands=['start'])  #handle of /start command
@@ -35,8 +35,11 @@ def send_help(message):
 
 @bot.message_handler(commands=['ic_statistic']) #handle of /ic_statistic command
 def ic_statistic(message):
-	msg = bot.send_message(message.from_user.id, 'Укажите "Дату С" в формате ДД.ММ.ГГГГ')
-	bot.register_next_step_handler(msg, date_from)
+	if check_user(message.from_user.id) == False:   #check if user can use telebot or not
+		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /help')
+	else:
+		msg = bot.send_message(message.from_user.id, 'Укажите "Дату С" в формате ДД.ММ.ГГГГ')
+		bot.register_next_step_handler(msg, date_from)
 
 def date_from(message):
 	try:
@@ -46,7 +49,6 @@ def date_from(message):
 	except Exception as err:
 		bot.send_message(message.from_user.id, 'Вы указали дату в неверном формате, попробуйте ещё раз, пожалуйста.')
 		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
-
 
 def date_to(message, date_from):
 	try:
@@ -69,6 +71,7 @@ def date_to(message, date_from):
 		except Exception as err:
 			bot.send_message(message.from_user.id,	 'К сожалению, возникла ошибка. Обратитесь, пожалуйста, в тех поддержку')
 			bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+			support_chat_id = admin_user_id_list() #get support chat id to send message in case of exception
 			for i in support_chat_id:
 				bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 
@@ -93,23 +96,28 @@ def get_email(message, user_data):
 	user_data.append(message.text)
 	try:
 		register_user(user_data)
+		support_chat_id = admin_user_id_list() #get support chat id to send message in case of exception
 		for i in support_chat_id:
 			bot.send_message(i, 'Внимание, зарегестрирован новый пользователь')
 		bot.send_message(message.from_user.id, 'Спасибо за регистрацию, ваша заявка принята. Обратитесь, пожалуйста, в ServiceDesk для завершения модерации заявки.')
 	except Exception as err:
 		bot.send_message(message.from_user.id, 'К сожалению, регистарция не удалась. Это фиаско. Попробуйте ещё раз позднее, пожалуйста')
 		bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+		support_chat_id = admin_user_id_list() #get support chat id to send message in case of exception
 		for i in support_chat_id:
 			bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 
 @bot.message_handler(commands=['gismt_task']) #handle of /gismt_task command
 def GISMT_task(message):
-	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-	btn1 = types.KeyboardButton("NS")
-	btn2 = types.KeyboardButton("NT")
-	markup.add(btn1, btn2)
-	msg = bot.send_message(message.chat.id, text="Пожалуйста, выберете бизнес-юнит, по которому требуется выгрузка данных.", reply_markup=markup)
-	bot.register_next_step_handler(msg, get_business_unit)
+	if check_user(message.from_user.id) == False:   #check if user can use telebot or not
+		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /help')
+	else:
+		markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+		btn1 = types.KeyboardButton("NS")
+		btn2 = types.KeyboardButton("NT")
+		markup.add(btn1, btn2)
+		msg = bot.send_message(message.chat.id, text="Пожалуйста, выберете бизнес-юнит, по которому требуется выгрузка данных.", reply_markup=markup)
+		bot.register_next_step_handler(msg, get_business_unit)
 
 def get_business_unit(message):
 	if message.text == '/reset':
@@ -178,11 +186,10 @@ def get_end_date(message, user_data, start_date):
 
 @bot.message_handler(content_types=["text"]) #handle of text message
 def text_message(message):
-	users = user_id_list()
-	if message.from_user.id not in users:   #check if user can use telebot or not
-		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /start')
+	if check_user(message.from_user.id) == False:   #check if user can use telebot or not
+		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /help')
 	else:
-		log_data = str(message.from_user.id)+'\t'+str(message.from_user.first_name)+'\t'+str(message.from_user.last_name)+'\t'+str(datetime.now().strftime("%d-%m-%Y %H:%M"))+'\t'+str(message.text)+'\n'
+		log_data = [message.from_user.id,message.text]
 		usage_log(log_data)
 		if len(re.sub("^\s+|\n|\r|\s+$", '', message.text)) == 11 and message.text[:2]=='20' and message.text.isnumeric():  #check for UPD number format
 			try:
@@ -200,6 +207,7 @@ def text_message(message):
 			except Exception as err:
 				bot.send_message(message.from_user.id, 'Не удалось подключиться к БД Oracle, обратитесь в поддержку')
 				bot.send_message(message.from_user.id, 'Ошибка: '+str(err))
+				support_chat_id = admin_user_id_list() #get support chat id to send message in case of exception
 				for i in support_chat_id:
 					bot.send_message(i,'Кое-кто попытался сломать бота!\n Вот это пользователь: '+str(message.from_user.id)+'\n'+str(message.from_user.first_name)+str(message.from_user.last_name)+'\n'+'Ошибка: '+str(err))
 			if edo_file_name !=None:
@@ -216,6 +224,7 @@ def text_message(message):
 				except Exception as err:
 					bot.send_message(message.from_user.id, 'Не удалось подключиться к ГИСМТ, обратитесь в поддержку')
 					bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+					support_chat_id = admin_user_id_list() #get support chat id to send message in case of exception
 					for i in support_chat_id:
 						bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 			else:
@@ -241,6 +250,7 @@ def text_message(message):
 			except Exception as err:
 				bot.send_message(message.from_user.id, 'Не удалось подключиться к БД Oracle, обратитесь в поддержку')
 				bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+				support_chat_id = admin_user_id_list() #get support chat id to send message in case of exception
 				for i in support_chat_id:
 					bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 			mc_list = []
@@ -250,6 +260,7 @@ def text_message(message):
 			except Exception as err:
 				bot.send_message(message.from_user.id, 'Не удалось подключиться к ГИСМТ, обратитесь в поддержку')
 				bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+				support_chat_id = admin_user_id_list() #get support chat id to send message in case of exception
 				for i in support_chat_id:
 					bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 			if data_for_user == {}:   # in case user sent wrong MC
@@ -260,7 +271,7 @@ def text_message(message):
 					message_result = message_result + '*'+str(x) + ':* [' + str(data_for_user.get(message.text).get(x)) + ']\n'
 				bot.send_message(message.from_user.id, message_result, parse_mode= "Markdown")
 
-		elif message.text.lower()[:5] == 'outs_':  #check for UIT marking code format
+		elif message.text.lower()[:5] == 'outs_':  #check for write_off document status
 			try:
 				doc_number = re.sub("^\s+|\n|\r|\s+$", '', message.text[5:])
 				data_for_user = check_outs_doc_status(doc_number)
@@ -311,11 +322,10 @@ def text_message(message):
 
 @bot.message_handler(content_types=["document"])
 def handle_docs(message):
-	users = user_id_list()
-	if message.from_user.id not in users:    #check if user can use telebot or not
-		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /start')
+	if check_user(message.from_user.id) == False:    #check if user can use telebot or not
+		bot.send_message(message.from_user.id, 'К сожалению, вы не в списке подтверждённых пользователей.\nПопробуйте воспользоваться командой /help')
 	else:
-		log_data = str(message.from_user.id) + '\t' + str(message.from_user.first_name) + '\t' + str(message.from_user.last_name) + '\t' + str(datetime.now().strftime("%d-%m-%Y %H:%M")) + '\t' + str(message.document.file_name) + '\n'
+		log_data = [message.from_user.id, str(message.document.file_name)]
 		usage_log(log_data)
 		import configparser
 		config = configparser.ConfigParser()
@@ -347,6 +357,7 @@ def handle_docs(message):
 				except Exception as err:
 					bot.send_message(message.from_user.id, 'Не удалось подключиться к T&T, обратитесь в поддержку')
 					bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+					support_chat_id = admin_user_id_list() #get support chat id to send message in case of exception
 					for i in support_chat_id:
 						bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 			else:
@@ -355,6 +366,7 @@ def handle_docs(message):
 				except Exception as err:
 					bot.send_message(message.from_user.id, 'Не удалось подключиться к ГИСМТ, обратитесь в поддержку')
 					bot.send_message(message.from_user.id, 'Ошибка: ' + str(err))
+					support_chat_id = admin_user_id_list() #get support chat id to send message in case of exception
 					for i in support_chat_id:
 						bot.send_message(i, 'Кое-кто попытался сломать бота!\n Вот это пользователь: ' + str(message.from_user.id) + '\n' + str(message.from_user.first_name) + str(message.from_user.last_name) + '\n' + 'Ошибка: ' + str(err))
 				result_file = create_excel(mc_list_good, data_for_user, message.document.file_name + '_result.xlsx')   #creating an Excel report for user

@@ -1,0 +1,22 @@
+version: "3"
+services:
+  db:
+    image: postgres:12.13-alpine
+    container_name: db_otm
+    environment:
+     - POSTGRES_DB=db_otm
+     - POSTGRES_PASSWORD=root
+     - POSTGRES_USER=admin
+     - PGDATA=/var/lib/postgresql/data/PGDATA
+    volumes:
+      - /home/arnovikov/python_projects/OTM_telebot:/var/lib/postgresql/data
+    ports:
+     - 5432:5432
+
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    container_name: rabbitmq
+    volumes:
+      - /home/arnovikov/python_projects/OTM_telebot/rabbitmqdata:/var/lib/rabbitmq/data
+    ports:
+     - 15672:15672

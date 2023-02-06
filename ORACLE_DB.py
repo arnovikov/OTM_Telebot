@@ -1,11 +1,12 @@
 from GLOBAL_VAR import global_var
+import oracledb
+import configparser
+config = configparser.ConfigParser()
+config.read(global_var())
+conn_str = config["ORACLE_DB"]["conn_str"]
+
 def select_MC_by_UPD(UPD_number):
-    import cx_Oracle
-    import configparser
-    config = configparser.ConfigParser()
-    config.read(global_var())
-    conn_str = config["ORACLE_DB"]["conn_str"]
-    conn = cx_Oracle.connect(conn_str)
+    conn = oracledb.connect(dsn=conn_str)
     mc_list = []
     #print(conn.version)
     str1 = """SELECT MC from xxnt.xxinv060_customer_trx_mc WHERE CUSTOMER_TRX_ID in (select CUSTOMER_TRX_ID from ra_customer_trx_all where TRX_NUMBER in ('"""
@@ -19,12 +20,7 @@ def select_MC_by_UPD(UPD_number):
 
 
 def UPD_data(UPD_number):
-    import cx_Oracle
-    import configparser
-    config = configparser.ConfigParser()
-    config.read(global_var())
-    conn_str = config["ORACLE_DB"]["conn_str"]
-    conn = cx_Oracle.connect(conn_str)
+    conn = oracledb.connect(dsn=conn_str)
     str1 = """
             select t.trx_number as TRX_NUMBER, decode(t.attribute4,'C','УКД','A','УПДи','УПД') as TRX_Type, trunc(t.trx_date) as TRX_DATE, par.ORGANIZATION_CODE as WAREHOUSE_CODE, NVL(tr.name, 'dropshipment') as TRIP, p.party_name as CUSTOMER_NAME, sum(tl.quantity_invoiced) as TYRES_QTY
             from ra_customer_trx_all t , ra_customer_trx_lines_all tl, hz_cust_accounts ca, hz_parties p, mtl_parameters par, wsh_trips tr
@@ -47,12 +43,7 @@ def UPD_data(UPD_number):
     return data
 
 def UIT_data (uit):
-    import cx_Oracle
-    import configparser
-    config = configparser.ConfigParser()
-    config.read(global_var())
-    conn_str = config["ORACLE_DB"]["conn_str"]
-    conn = cx_Oracle.connect(conn_str)
+    conn = oracledb.connect(dsn=conn_str)
     str1 = """
             select  t.trx_number as TRX_Number, decode(t.attribute4,'C','УКД','A','УПДи','УПД') as TRX_Type, trunc(t.trx_date) as TRX_DATE, p.party_name as CUSTOMER_NAME, par.ORGANIZATION_CODE as WAREHOUSE_CODE, NVL(tr.name, 'dropshipment') as TRIP, i.segment1 as ITEM_CODE, mc.SOURCE_REFERENCE, mc.SOURCE_TYPE 
             from xxnt.xxinv060_customer_trx_mc mc, ra_customer_trx_all t , hz_cust_accounts ca, hz_parties p, mtl_system_items i, ra_customer_trx_lines_all tl, mtl_parameters par, wsh_trips tr
@@ -79,12 +70,7 @@ def UIT_data (uit):
     return data
 
 def EDO_file_name(doc_num):
-    import cx_Oracle
-    import configparser
-    config = configparser.ConfigParser()
-    config.read(global_var())
-    conn_str = config["ORACLE_DB"]["conn_str"]
-    conn = cx_Oracle.connect(conn_str)
+    conn = oracledb.connect(dsn=conn_str)
     str1 = """
                 SELECT max(file_name) keep (dense_rank last order by creation_date)
                 FROM XXFIN230_EDOC_OUTBOUND_INT1  
